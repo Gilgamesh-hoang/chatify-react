@@ -1,22 +1,14 @@
 import {createSlice, PayloadAction} from '@reduxjs/toolkit'
 
-interface UserState {
-    _id: string;
-    name: string;
-    email: string;
-    profile_pic: string;
+export interface UserState {
+    username: string;
     token: string;
-    onlineUser: Array<string>; // Assuming onlineUser is an array of user IDs or names
-    socketConnection: WebSocket | null; // Assuming socketConnection is of type WebSocket or null
+    socketConnection: WebSocket | null;
 }
 
 const initialState: UserState = {
-    _id: "",
-    name: "",
-    email: "",
-    profile_pic: "",
-    token: "",
-    onlineUser: [],
+    username: "",
+    token : "",
     socketConnection: null
 }
 
@@ -24,10 +16,12 @@ export const userSlice = createSlice({
     name: 'user',
     initialState,
     reducers: {
-        setUser: (state, action: PayloadAction<{ _id: string; name: string; email: string; profile_pic: string }>) => {
+        setUser: (state, action: PayloadAction<{ name: string; email: string;}>) => {
 
         },
         setToken: (state, action: PayloadAction<string>) => {
+            state.username = "";
+            state.token = "";
         },
         logout: (state) => {
 
