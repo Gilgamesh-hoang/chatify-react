@@ -1,10 +1,8 @@
 import React from "react";
-import {Example} from "../component/Example";
 import DefaultLayout from "../layout/DefaultLayout";
 import Login from "../pages/Login";
-import AuthLayouts from "../layout/NoLayout";
-import Register from "../pages/Register";
 import NoLayout from "../layout/NoLayout";
+import Register from "../pages/Register";
 import Home from "../pages/Home";
 
 export interface RouteType {
