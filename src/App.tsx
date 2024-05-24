@@ -1,11 +1,12 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import './App.css';
 import {privateRoutes, publicRoutes, RouteType} from "./router";
 import DefaultLayout from "./layout/DefaultLayout";
-import {BrowserRouter as Router, Routes, Route, useNavigate} from "react-router-dom";
-import { useSelector } from 'react-redux';
-import { userSelector } from './redux/selector';
+import {BrowserRouter as Router, Route, Routes} from "react-router-dom";
+import {useSelector} from 'react-redux';
+import {userSelector} from './redux/selector';
 import Login from './pages/Login';
+import {Toaster} from "react-hot-toast";
 
 
 function App() {
@@ -25,13 +26,14 @@ function App() {
     return (
         <div>
             <Router>
+
                 <Routes>
                     {
                         publicRoutes.map((routeObject, index: number) =>
                             RouteRender(routeObject, index)
                         )
                     }
-                    {token && 
+                    {token &&
                         privateRoutes.map((routeObject, index: number) =>
                             RouteRender(routeObject, index)
                         )
