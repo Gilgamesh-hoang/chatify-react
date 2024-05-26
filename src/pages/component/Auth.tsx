@@ -24,6 +24,7 @@ export interface LoginParams {
 }
 
 type ActionType = "LOGIN" | "REGISTER"
+
 const Auth = ({action}: { action: ActionType }) => {
     const navigate = useNavigate();
     const dispatch = useDispatch<AppDispatch>();
@@ -38,6 +39,7 @@ const Auth = ({action}: { action: ActionType }) => {
         onSubmit: (values) => {
             switch (action) {
                 case "LOGIN" :
+                    handleLogin(values);
                     break;
                 case 'REGISTER' :
                     handleRegister(values);
@@ -87,6 +89,52 @@ const Auth = ({action}: { action: ActionType }) => {
         socket.onerror = (error: Event) => {
             console.log(error)
             showErrorToast('error', 'Sign Up Failed', 3000);
+        }
+
+        socket.onclose = () => {
+            console.log('disconnected')
+        }
+    }
+
+    const handleLogin = (values: LoginParams) => {
+        const url: string = 'ws://140.238.54.136:8080/chat/chat';
+        const socket: WebSocket = new WebSocket(url);
+
+        socket.onopen = () => {
+            // console.log('connected')
+            socket.send(JSON.stringify({
+                action: "onchat",
+                data: {
+                    event: "LOGIN",
+                    data: {
+                        user: values.username,
+                        pass: values.password,
+                    }
+                }
+            }));
+        }
+
+        socket.onmessage = (event: MessageEvent) => {
+            // console.log(event.data)
+            const data = JSON.parse(event.data);
+
+            if (data.event === 'LOGIN' && data.status === 'success') {
+                showErrorToast('success', 'Login Success! Please wait...', 3000);
+                setTimeout(() => {
+                    localStorage.setItem('token', data.data.RE_LOGIN_CODE)
+                    navigate('/');
+                }, 3000);
+            }
+
+            if (data.event === 'LOGIN' && data.status === 'error') {
+                showErrorToast('error', 'Failed, wrong username or password!', 3000);
+            }
+
+        }
+
+        socket.onerror = (error: Event) => {
+            console.log(error)
+            showErrorToast('error', 'Log In Failed', 3000);
         }
 
         socket.onclose = () => {
