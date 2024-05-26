@@ -1,9 +1,9 @@
 import React, {useState} from 'react'
 import {useSelector} from "react-redux";
-import {userSelector} from '../../redux/selector';
-import {UserState} from '../../redux/userSlice';
-import ChatItem from "../../component/ChatItem";
-import NavSideBar from "../component/NavSideBar";
+import {userSelector} from '~/redux/selector';
+import {UserState} from '~/redux/userSlice';
+import ChatItem from "~/component/ChatItem";
+import NavSideBar from "~/pages/component/NavSideBar";
 
 const Sidebar = () => {
     const user: UserState = useSelector(userSelector);
@@ -38,7 +38,7 @@ const Sidebar = () => {
                                 actionTime: new Date(Date.now() - (index * 1000000))
                             }))
                             .sort((a, b) => (b.actionTime.getTime() > a.actionTime.getTime() ? 1 : -1))
-                            .map((user) => <ChatItem {...user} />)
+                            .map((user, index) => <ChatItem key={index} {...user} />)
                     }
                     <ChatItem type='room' actionTime={new Date(new Date().setFullYear(2024, 2, 1))} name="room"
                               unseen={true} lastMessage={"iaubg uahra huirb aigbrior g"}/>

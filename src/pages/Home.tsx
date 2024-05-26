@@ -1,10 +1,10 @@
 import React, {useEffect} from 'react'
 import {Outlet, useLocation} from "react-router";
 import Sidebar from "./component/Sidebar"
-import {userSelector} from '../redux/selector';
+import {userSelector} from '~/redux/selector';
 import {useSelector} from 'react-redux';
 import clsx from "clsx";
-import logo from '../assets/logo.png';
+import logo from '~/assets/logo.png';
 
 const Home = () => {
 

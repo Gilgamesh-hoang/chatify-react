@@ -2,7 +2,7 @@ import {NavLink} from "react-router-dom";
 import clsx from "clsx";
 import {IoChatbubbleEllipses} from "react-icons/io5";
 import {FaUserPlus} from "react-icons/fa";
-import Avatar from "../../component/Avatar";
+import Avatar from "~/component/Avatar";
 import {BiLogOut} from "react-icons/bi";
 import React from "react";
 
