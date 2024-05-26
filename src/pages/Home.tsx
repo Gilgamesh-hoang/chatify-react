@@ -1,10 +1,10 @@
 import React, {useEffect} from 'react'
 import {Outlet, useLocation} from "react-router";
 import Sidebar from "./component/Sidebar"
-import {userSelector} from '../redux/selector';
+import {userSelector} from '~/redux/selector';
 import {useSelector} from 'react-redux';
 import clsx from "clsx";
-import logo from '../assets/logo.png';
+import logo from '~/assets/logo.png';
 
 const Home = () => {
 
@@ -23,7 +23,7 @@ const Home = () => {
 
     const basePath: boolean = location.pathname === '/';
     return (
-        <div className='grid lg:grid-cols-[300px,1fr] h-screen max-h-screen'>
+        <div className='grid lg:grid-cols-[370px,1fr] h-screen max-h-screen'>
             <section className={clsx('bg-white lg:block', {'hidden': !basePath})}>
                 <Sidebar/>
             </section>

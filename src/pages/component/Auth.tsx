@@ -1,15 +1,15 @@
 import React from 'react'
 import {Input, Spin} from 'antd';
 import {LoadingOutlined} from '@ant-design/icons';
-import Button from '../../component/Button';
+import Button from '~/component/Button';
 import * as yup from 'yup';
-import logo from '../../assets/logo.png'
+import logo from '~/assets/logo.png'
 import {useFormik} from 'formik';
 import {useDispatch, useSelector} from 'react-redux';
-import {AppDispatch} from '../../redux/store';
+import {AppDispatch} from '~/redux/store';
 import {Link, useNavigate} from 'react-router-dom';
-import {authSelector} from '../../redux/selector';
-import {AuthState} from '../../redux/authSlice';
+import {authSelector} from '~/redux/selector';
+import {AuthState} from '~/redux/authSlice';
 import clsx from 'clsx';
 import toast, {Toaster} from "react-hot-toast";
 

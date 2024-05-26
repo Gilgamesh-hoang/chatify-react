@@ -6,7 +6,6 @@ import {BrowserRouter as Router, Route, Routes} from "react-router-dom";
 import {useSelector} from 'react-redux';
 import {userSelector} from './redux/selector';
 import Login from './pages/Login';
-import {Toaster} from "react-hot-toast";
 
 
 function App() {
