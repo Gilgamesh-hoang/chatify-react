@@ -18,10 +18,11 @@ const Avatar: React.FC<AvatarProps> = ({username, imageUrl, width, height}) => {
         if (splitName.length > 1) {
             // If so, set the avatar name to the first letter of the first two words
             avatarName = splitName[0][0] + splitName[1][0];
-        } else {
+        } else if (splitName[0][0].length > 1){
             // If not, set the avatar name to the first two letters of the first word
             avatarName = splitName[0][0] + splitName[0][1];
-        }
+        }else
+            avatarName = splitName[0][0];
     }
 
     return (

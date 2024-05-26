@@ -6,7 +6,8 @@ module.exports = {
     extend: {
       colors : {
         primary : "#00acb4",
-        secondary : "#058187"
+        secondary : "#058187",
+        customBackgroundHome: '#e1e7ef',
       }
     },
   },
