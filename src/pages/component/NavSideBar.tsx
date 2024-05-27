@@ -11,6 +11,10 @@ interface NavSideBarProps {
 }
 
 const NavSideBar : React.FC<NavSideBarProps> = ({name}) => {
+    const handleLogout = () => {
+        localStorage.clear();
+        window.location.reload();
+    }
     return (
         <div
             className='bg-slate-100 w-12 h-full rounded-tr-lg rounded-br-lg py-5 text-slate-600 flex flex-col justify-between'>
@@ -48,7 +52,7 @@ const NavSideBar : React.FC<NavSideBarProps> = ({name}) => {
                     title="Logout"
                     className='w-12 h-12 flex justify-center items-center cursor-pointer hover:bg-slate-200 rounded'>
                             <span className='-ml-2'>
-                                <BiLogOut size={25}/>
+                                <BiLogOut onClick={handleLogout} size={25}/>
                             </span>
                 </button>
             </div>

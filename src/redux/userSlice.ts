@@ -2,29 +2,21 @@ import {createSlice, PayloadAction} from '@reduxjs/toolkit'
 
 export interface UserState {
     username: string;
-    token: string;
-    socketConnection: WebSocket | null;
 }
 
-const initialState: UserState = {
+export const userInitState: UserState = {
     username: "",
-    token : "",
-    socketConnection: null
 }
 
 export const userSlice = createSlice({
     name: 'user',
-    initialState,
+    initialState : userInitState,
     reducers: {
-        setUser: (state, action: PayloadAction<{ name: string; email: string;}>) => {
-
-        },
-        setToken: (state, action: PayloadAction<string>) => {
-            state.username = "";
-            state.token = "";
+        setUserName: (state, action: PayloadAction<string>) => {
+            state.username = action.payload
         },
         logout: (state) => {
-
+            
         },
         setOnlineUser: (state, action: PayloadAction<Array<string>>) => {
 
@@ -36,6 +28,6 @@ export const userSlice = createSlice({
 })
 
 // Action creators are generated for each case reducer function
-export const {setUser, setToken, logout, setOnlineUser, setSocketConnection} = userSlice.actions;
+export const {setUserName, logout, setOnlineUser, setSocketConnection} = userSlice.actions;
 
 export default userSlice.reducer;
