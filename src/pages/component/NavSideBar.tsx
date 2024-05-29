@@ -43,6 +43,7 @@ const NavSideBar : React.FC<NavSideBarProps> = ({name}) => {
             <div className='flex flex-col items-center'>
                 <button className='mx-auto' title={name}>
                     <Avatar
+                        type={0}
                         width={40}
                         height={40}
                         name={name}
@@ -60,4 +61,4 @@ const NavSideBar : React.FC<NavSideBarProps> = ({name}) => {
     );
 }
 
-export default NavSideBar;
+export default React.memo(NavSideBar);

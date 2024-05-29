@@ -1,36 +1,33 @@
 import {PiUserCircle} from "react-icons/pi";
-import React from "react";
+import React, {useMemo} from "react";
 import {HiMiniUserGroup} from "react-icons/hi2";
 
 interface AvatarProps {
-    type?: string;
+    type: number;
     name: string;
     imageUrl?: string;
     width: number;
     height: number;
 }
 
-const Avatar: React.FC<AvatarProps> = ({type = 'user', name, imageUrl, width, height}) => {
+const Avatar: React.FC<AvatarProps> = ({type, name, imageUrl, width, height}) => {
+    const avatarName = useMemo(() => {
+        if (!name) return '';
 
-    let avatarName: string = ""
-    if (name) {
-        // Split the name into an array of words
-        const splitName: string[] = name?.split(" ")
-
+        const splitName = name.split(" ");
         if (splitName.length > 1) {
-            // If so, set the avatar name to the first letter of the first two words
-            avatarName = splitName[0][0] + splitName[1][0];
-        } else if (splitName[0][0].length > 1) {
-            // If not, set the avatar name to the first two letters of the first word
-            avatarName = splitName[0][0] + splitName[0][1];
-        } else
-            avatarName = splitName[0][0];
-    }
+            return splitName[0][0] + splitName[1][0];
+        } else if (splitName[0].length > 1) {
+            return splitName[0][0] + splitName[0][1];
+        } else {
+            return splitName[0][0];
+        }
+    }, [name]);
 
     // This function is responsible for rendering the avatar based on the provided props.
     const renderAvatar = () => {
         // If the type prop is 'room', render a group icon.
-        if (type === 'room') {
+        if (type == 1) {
             return (
                 <div className={`rounded-full flex justify-center items-center border-2 border-gray-700` }>
                     <HiMiniUserGroup size={width}/>
@@ -74,4 +71,4 @@ const Avatar: React.FC<AvatarProps> = ({type = 'user', name, imageUrl, width, he
     );
 }
 
-export default Avatar;
+export default React.memo(Avatar);
