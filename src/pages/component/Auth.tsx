@@ -66,17 +66,19 @@ const Auth = ({action}: { action: ActionType }) => {
         socket.onmessage = (event: MessageEvent) => {
             const data = JSON.parse(event.data);
             if (data.event === 'LOGIN' && data.status === 'success') {
-                showErrorToast('success', 'Login Success', 3000);
+                showToast('success', 'Login Success', 3000);
                 localStorage.setItem('userName',values.username);
                 localStorage.setItem('token',data.data.RE_LOGIN_CODE);
-                setTimeout(() => {
-                    window.location.href='/'
-                }, 3000);
+                navigate('/');
+                // setTimeout(() => {
+                //     window.location.href='/'
+                // }, 3000);
             }
             if (data.event === 'LOGIN' && data.status === 'error') {
-                showErrorToast('error', data.mes, 3000);
+                showToast('error', data.mes, 3000);
             }
         }
+
     }
     const handleRegister = (socket : WebSocket,values: LoginParams) => {
         const registerParams : SocketEvent = {
@@ -93,18 +95,18 @@ const Auth = ({action}: { action: ActionType }) => {
         socket.onmessage = (event: MessageEvent) => {
             const data = JSON.parse(event.data);
             if (data.event === 'REGISTER' && data.status === 'success') {
-                showErrorToast('success', 'Register Success', 3000);
+                showToast('success', 'Register Success', 3000);
                 setTimeout(() => {
                     navigate('/login');
                 }, 3000);
             }
             if (data.event === 'REGISTER' && data.status === 'error') {
-                showErrorToast('error', data.mes, 3000);
+                showToast('error', data.mes, 3000);
             }
         }
     }
 
-    const showErrorToast = (type: string, message: string, duration: number) => {
+    const showToast = (type: string, message: string, duration: number) => {
         if (type === 'success') {
             toast.success(message, {
                 duration: duration,

@@ -38,7 +38,7 @@ function App() {
                 }
             }
         }
-    
+
     },[socket])
     const RouteRender = (route: RouteType, index: number) => {
         let Layout = route.layout || DefaultLayout
