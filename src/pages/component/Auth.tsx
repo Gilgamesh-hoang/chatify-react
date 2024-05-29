@@ -1,17 +1,18 @@
 import React from 'react'
 import {Input, Spin} from 'antd';
 import {LoadingOutlined} from '@ant-design/icons';
-import Button from '../../component/Button';
+import Button from '~/component/Button';
 import * as yup from 'yup';
-import logo from '../../assets/logo.png'
+import logo from '~/assets/logo.png'
 import {useFormik} from 'formik';
 import {useDispatch, useSelector} from 'react-redux';
-import {AppDispatch} from '../../redux/store';
+import {AppDispatch} from '~/redux/store';
 import {Link, useNavigate} from 'react-router-dom';
-import {authSelector} from '../../redux/selector';
-import {AuthState} from '../../redux/authSlice';
 import clsx from 'clsx';
 import toast, {Toaster} from "react-hot-toast";
+import { socketSelector } from '~/redux/selector';
+import { socketSendMessage } from '~/redux/socketSlice';
+import { SocketEvent } from '~/model/SocketEvent';
 
 const loginSchema = yup.object({
     username: yup.string().required('Email or username is required'),
@@ -24,25 +25,25 @@ export interface LoginParams {
 }
 
 type ActionType = "LOGIN" | "REGISTER"
-
 const Auth = ({action}: { action: ActionType }) => {
     const navigate = useNavigate();
     const dispatch = useDispatch<AppDispatch>();
-    const authState: AuthState = useSelector(authSelector)
+    const socket = useSelector(socketSelector);
     const initialValues: LoginParams = {
         username: '',
         password: ''
     }
+   
     const formik = useFormik<LoginParams>({
         initialValues,
         validationSchema: loginSchema,
         onSubmit: (values) => {
             switch (action) {
                 case "LOGIN" :
-                    handleLogin(values);
+                    handleLogin(socket,values);
                     break;
                 case 'REGISTER' :
-                    handleRegister(values);
+                    handleRegister(socket,values);
                     break;
                 default :
                     break
@@ -50,95 +51,56 @@ const Auth = ({action}: { action: ActionType }) => {
 
         },
     });
-
-    const handleRegister = (values: LoginParams) => {
-        const url: string = 'ws://140.238.54.136:8080/chat/chat';
-        const socket: WebSocket = new WebSocket(url);
-
-        socket.onopen = () => {
-            // console.log('connected')
-            socket.send(JSON.stringify({
-                action: "onchat",
+    const handleLogin = (socket : WebSocket,values: LoginParams) => {
+        const loginParams : SocketEvent = {
+            action: "onchat",
+            data: {
+                event: "LOGIN",
                 data: {
-                    event: "REGISTER",
-                    data: {
-                        user: values.username,
-                        pass: values.password,
-                    }
+                    user: values.username,
+                    pass: values.password,
                 }
-            }));
+            }
         }
-
+        socket.send(JSON.stringify(loginParams));
         socket.onmessage = (event: MessageEvent) => {
-            // console.log(event.data)
             const data = JSON.parse(event.data);
-
+            if (data.event === 'LOGIN' && data.status === 'success') {
+                showErrorToast('success', 'Login Success', 3000);
+                localStorage.setItem('userName',values.username);
+                localStorage.setItem('token',data.data.RE_LOGIN_CODE);
+                setTimeout(() => {
+                    window.location.href='/'
+                }, 3000);
+            }
+            if (data.event === 'LOGIN' && data.status === 'error') {
+                showErrorToast('error', data.mes, 3000);
+            }
+        }
+    }
+    const handleRegister = (socket : WebSocket,values: LoginParams) => {
+        const registerParams : SocketEvent = {
+            action: "onchat",
+            data: {
+                event: "REGISTER",
+                data: {
+                    user: values.username,
+                    pass: values.password,
+                }
+            }
+        }
+        socket.send(JSON.stringify(registerParams));
+        socket.onmessage = (event: MessageEvent) => {
+            const data = JSON.parse(event.data);
             if (data.event === 'REGISTER' && data.status === 'success') {
                 showErrorToast('success', 'Register Success', 3000);
                 setTimeout(() => {
                     navigate('/login');
                 }, 3000);
             }
-
             if (data.event === 'REGISTER' && data.status === 'error') {
-                showErrorToast('error', 'Failed, same user name!', 3000);
+                showErrorToast('error', data.mes, 3000);
             }
-
-        }
-
-        socket.onerror = (error: Event) => {
-            console.log(error)
-            showErrorToast('error', 'Sign Up Failed', 3000);
-        }
-
-        socket.onclose = () => {
-            console.log('disconnected')
-        }
-    }
-
-    const handleLogin = (values: LoginParams) => {
-        const url: string = 'ws://140.238.54.136:8080/chat/chat';
-        const socket: WebSocket = new WebSocket(url);
-
-        socket.onopen = () => {
-            // console.log('connected')
-            socket.send(JSON.stringify({
-                action: "onchat",
-                data: {
-                    event: "LOGIN",
-                    data: {
-                        user: values.username,
-                        pass: values.password,
-                    }
-                }
-            }));
-        }
-
-        socket.onmessage = (event: MessageEvent) => {
-            // console.log(event.data)
-            const data = JSON.parse(event.data);
-
-            if (data.event === 'LOGIN' && data.status === 'success') {
-                showErrorToast('success', 'Login Success! Please wait...', 3000);
-                setTimeout(() => {
-                    localStorage.setItem('token', data.data.RE_LOGIN_CODE)
-                    navigate('/');
-                }, 3000);
-            }
-
-            if (data.event === 'LOGIN' && data.status === 'error') {
-                showErrorToast('error', 'Failed, wrong username or password!', 3000);
-            }
-
-        }
-
-        socket.onerror = (error: Event) => {
-            console.log(error)
-            showErrorToast('error', 'Log In Failed', 3000);
-        }
-
-        socket.onclose = () => {
-            console.log('disconnected')
         }
     }
 
@@ -212,10 +174,10 @@ const Auth = ({action}: { action: ActionType }) => {
                                             formik.errors.password}
                                     </p>
                                     <Button type='submit' className='mt-4'>
-                                        {authState.isLoading && <Spin className='' indicator={<LoadingOutlined
-                                            style={{fontSize: 24, color: 'white'}} spin/>}/>}
-                                        {!authState.isLoading && action === "LOGIN" && 'Log in'}
-                                        {!authState.isLoading && action === "REGISTER" && 'Register'}
+                                        {/* { <Spin className='' indicator={<LoadingOutlined
+                                            style={{fontSize: 24, color: 'white'}} spin/>}/>} */}
+                                        {action === "LOGIN" && 'Log in'}
+                                        {action === "REGISTER" && 'Register'}
                                     </Button>
                                     <div className='mt-8 mx-auto w-fit flex gap-4'>
 
@@ -244,10 +206,10 @@ const Auth = ({action}: { action: ActionType }) => {
                         </p>
                     }
                     <div className='bg-[#121212] h-[75px] px-[100px] w-full justify-between hidden md:flex'>
-                        {/*<div className='border-[0.5px] border-[#ffffff8e] h-fit my-auto text-white px-3 py-1  pe-16'>*/}
-                        {/*    English*/}
-                        {/*</div>*/}
-                        {/*<p className='text-gray-400 font-semibold opacity-60 my-auto'>© 2024 TikTok</p>*/}
+                        <div className='border-[0.5px] border-[#ffffff8e] h-fit my-auto text-white px-3 py-1  pe-16'>
+                           English
+                        </div>
+                        <p className='text-gray-400 font-semibold opacity-60 my-auto'>© 2024 ChatApp</p>
                     </div>
                 </div>
 

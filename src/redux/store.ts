@@ -1,21 +1,19 @@
 import { Reducer, configureStore } from '@reduxjs/toolkit'
 import userReducer, { UserState } from './userSlice'
-import authSlice, { AuthState } from './authSlice';
-
-export interface RootState {
-    user : UserState
-    auth : AuthState
-}
+import socketSlice, { SocketState } from './socketSlice'
+import websocketMiddleware from './middleware/socketMiddleware'
 export interface RootStateType {
-    user : Reducer<UserState>
-    auth : Reducer<AuthState>
+    app : Reducer<SocketState>
+   
 }
 const rootReducer:RootStateType =  {
-    user : userReducer,
-    auth : authSlice
+    app : socketSlice,
 
 }
 export const store = configureStore({
-    reducer : rootReducer
+    reducer : rootReducer,
+    middleware: (getDefaultMiddleware) =>
+        getDefaultMiddleware().concat(websocketMiddleware),
 });
+export type RootState = ReturnType<typeof store.getState>;
 export type AppDispatch = typeof store.dispatch
