@@ -2,10 +2,10 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 import { userInitState, UserState } from './userSlice';
 import { SocketEvent } from '~/model/SocketEvent';
-
+export type StatusSocket = 'connecting' | 'open' | 'closed' | 'error';
 export interface SocketState {
   socket: WebSocket | null;
-  statusSocket : 'connecting' | 'open' | 'closed' | 'error';
+  statusSocket : StatusSocket;
   user: UserState;
 }
 

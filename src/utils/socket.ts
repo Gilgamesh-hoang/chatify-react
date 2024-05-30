@@ -28,6 +28,7 @@ export const setupWebSocket = (dispatch: Dispatch) => {
   socket.onclose = () => {
     console.log('WebSocket connection closed');
   };
+  
 
   socket.onerror = (error) => {
     console.error('WebSocket error:', error);

@@ -1,18 +1,20 @@
 import React, {useEffect, useState} from 'react'
-import {useSelector} from "react-redux";
+import {useDispatch, useSelector} from "react-redux";
 import {socketSelector, userSelector} from '~/redux/selector';
 import {UserState} from '~/redux/userSlice';
 import {SideBarItem} from "~/pages/component/sidebar";
 import NavSideBar from "~/pages/component/NavSideBar";
 import {SocketEvent} from "~/model/SocketEvent";
 import {SideBarProp} from "~/model/SideBarProp";
+import { AppDispatch } from '~/redux/store';
+import { socketSendMessage } from '~/redux/socketSlice';
 
 const Sidebar = () => {
     const userName = localStorage.getItem('userName');
     const user: UserState = useSelector(userSelector);
     const [allUsers, setAllUsers] = useState<SideBarProp[]>([]);
     const socket = useSelector(socketSelector);
-
+    const dispatch = useDispatch<AppDispatch>()
     const getUserParams: SocketEvent = {
         action: 'onchat',
         data: {
@@ -22,12 +24,10 @@ const Sidebar = () => {
 
     useEffect(() => {
         if (socket) {
-            socket.send(JSON.stringify(getUserParams));
-
+            socket.onopen = (e)=>dispatch(socketSendMessage(getUserParams));
             socket.onmessage = (event: MessageEvent) => {
                 const data = JSON.parse(event.data);
                 if (data.event === "GET_USER_LIST" && data.status === "success") {
-
                     const conversationUserData = data.data.filter((conv: any) => {
                         if (conv.name != userName) {
                             let sideBarProp: SideBarProp = {

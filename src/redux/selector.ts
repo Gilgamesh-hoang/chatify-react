@@ -1,3 +1,4 @@
+import { StatusSocket } from "./socketSlice";
 import {RootState} from "./store";
 import {UserState} from "./userSlice";
 

@@ -1,5 +1,5 @@
 import React from 'react'
-import {Input, Spin} from 'antd';
+import {Input, Spin, message} from 'antd';
 import {LoadingOutlined} from '@ant-design/icons';
 import Button from '~/component/Button';
 import * as yup from 'yup';
@@ -40,10 +40,10 @@ const Auth = ({action}: { action: ActionType }) => {
         onSubmit: (values) => {
             switch (action) {
                 case "LOGIN" :
-                    handleLogin(socket,values);
+                    handleSubmitAuth(socket,values);
                     break;
                 case 'REGISTER' :
-                    handleRegister(socket,values);
+                    handleSubmitAuth(socket,values);
                     break;
                 default :
                     break
@@ -51,73 +51,41 @@ const Auth = ({action}: { action: ActionType }) => {
 
         },
     });
-    const handleLogin = (socket : WebSocket,values: LoginParams) => {
-        const loginParams : SocketEvent = {
+    const handleSubmitAuth = (socket : WebSocket,values: LoginParams) => {
+        const authParams : SocketEvent = {
             action: "onchat",
             data: {
-                event: "LOGIN",
+                event: action,
                 data: {
                     user: values.username,
                     pass: values.password,
                 }
             }
         }
-        socket.send(JSON.stringify(loginParams));
+        socket.send(JSON.stringify(authParams));
         socket.onmessage = (event: MessageEvent) => {
             const data = JSON.parse(event.data);
-            if (data.event === 'LOGIN' && data.status === 'success') {
-                showToast('success', 'Login Success', 3000);
-                localStorage.setItem('userName',values.username);
-                localStorage.setItem('token',data.data.RE_LOGIN_CODE);
-                navigate('/');
-                // setTimeout(() => {
-                //     window.location.href='/'
-                // }, 3000);
-            }
-            if (data.event === 'LOGIN' && data.status === 'error') {
-                showToast('error', data.mes, 3000);
-            }
-        }
-
-    }
-    const handleRegister = (socket : WebSocket,values: LoginParams) => {
-        const registerParams : SocketEvent = {
-            action: "onchat",
-            data: {
-                event: "REGISTER",
-                data: {
-                    user: values.username,
-                    pass: values.password,
+            if (data.status === "success") {
+                switch (data.event) {
+                    case "LOGIN" :
+                        message.success('Login Success');
+                        localStorage.setItem('userName',values.username);
+                        localStorage.setItem('token',data.data.RE_LOGIN_CODE);
+                        navigate('/');
+                        break;
+    
+                    case "REGISTER":
+                        message.success('Register Success');
+                        setTimeout(() => {
+                            navigate('/login');
+                        }, 3000);
+                        break;
                 }
-            }
-        }
-        socket.send(JSON.stringify(registerParams));
-        socket.onmessage = (event: MessageEvent) => {
-            const data = JSON.parse(event.data);
-            if (data.event === 'REGISTER' && data.status === 'success') {
-                showToast('success', 'Register Success', 3000);
-                setTimeout(() => {
-                    navigate('/login');
-                }, 3000);
-            }
-            if (data.event === 'REGISTER' && data.status === 'error') {
-                showToast('error', data.mes, 3000);
+            } else {
+                message.error(data.mes);
             }
         }
     }
-
-    const showToast = (type: string, message: string, duration: number) => {
-        if (type === 'success') {
-            toast.success(message, {
-                duration: duration,
-            });
-        } else if (type === 'error') {
-            toast.error(message, {
-                duration: duration,
-            });
-        }
-    }
-
     return (
         <>
             <Toaster
