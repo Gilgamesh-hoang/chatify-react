@@ -62,7 +62,7 @@ function App() {
                         )
                     }
                     {
-                        token && userName &&
+                        
                         privateRoutes.map((routeObject, index: number) =>
                             RouteRender(routeObject, index)
                         )

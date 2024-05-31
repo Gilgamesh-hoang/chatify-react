@@ -29,6 +29,8 @@ export const socketSlice = createSlice({
       state.socket = null;
     },
     socketSendMessage: (state, action: PayloadAction<SocketEvent>) => {
+      console.log('send message', action.payload);
+      
       state.socket?.send(JSON.stringify(action));
     },
     socketReceiveMessage: (state, action: PayloadAction<any>) => {

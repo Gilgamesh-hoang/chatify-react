@@ -23,8 +23,8 @@ const Sidebar = () => {
     }
 
     useEffect(() => {
-        if (socket) {
-            socket.onopen = (e)=>dispatch(socketSendMessage(getUserParams));
+        if (socket && user.username) {
+            dispatch(socketSendMessage(getUserParams))
             socket.onmessage = (event: MessageEvent) => {
                 const data = JSON.parse(event.data);
                 if (data.event === "GET_USER_LIST" && data.status === "success") {

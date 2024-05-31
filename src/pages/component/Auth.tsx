@@ -13,6 +13,7 @@ import toast, {Toaster} from "react-hot-toast";
 import { socketSelector } from '~/redux/selector';
 import { socketSendMessage } from '~/redux/socketSlice';
 import { SocketEvent } from '~/model/SocketEvent';
+import { setUserName } from '~/redux/userSlice';
 
 const loginSchema = yup.object({
     username: yup.string().required('Email or username is required'),
@@ -71,6 +72,7 @@ const Auth = ({action}: { action: ActionType }) => {
                         message.success('Login Success');
                         localStorage.setItem('userName',values.username);
                         localStorage.setItem('token',data.data.RE_LOGIN_CODE);
+                        dispatch(setUserName(values.username))
                         navigate('/');
                         break;
     
