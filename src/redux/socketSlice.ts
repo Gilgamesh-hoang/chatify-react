@@ -21,12 +21,14 @@ export const socketSlice = createSlice({
   reducers: {
     socketConnect: (state,action :PayloadAction<WebSocket | null>) => {
       state.socket = action.payload
+      console.log('jotard: connected')
     },
     socketDisconnect: (state) => {
       if (state.socket) {
         state.socket.close();
       }
       state.socket = null;
+      console.log('jotard: disconnected')
     },
     socketSendMessage: (state, action: PayloadAction<SocketEvent>) => {
       state.socket?.send(JSON.stringify(action));
