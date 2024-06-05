@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, {useEffect, useLayoutEffect} from 'react';
 import './App.css';
 import {privateRoutes, publicRoutes, RouteType} from "./router";
 import DefaultLayout from "./layout/DefaultLayout";
@@ -12,26 +12,31 @@ import { SocketEvent } from './model/SocketEvent';
 
 
 function App() {
+    
     const token = localStorage.getItem('token') ?? '';
     const userName = localStorage.getItem('userName') ?? '';
     const user = useSelector(userSelector);
     const dispatch = useDispatch<AppDispatch>();
     const socket = useSelector(socketSelector)
-    useEffect(()=>{
+
+    useLayoutEffect(()=>{
+        console.log("Trying to connect to a websocket...")
         dispatch(socketConnect(null));
     },[])
-    useEffect(()=> {
+
+    useLayoutEffect(()=> {
         if (socket) {
-            socket.onopen = ()=>{
+            console.log("Checking for reLogin")
+            socket.onopen = ()=> {
                 if (token && userName && !user.username) {
                     const reloginParams :SocketEvent = {
                         "action": "onchat",
                         "data": {
-                          "event": "RE_LOGIN",
-                          "data": {
-                            "user": userName,
-                            "code": token
-                          }
+                            "event": "RE_LOGIN",
+                            "data": {
+                                "user": userName,
+                                "code": token
+                            }
                         }
                     }
                     dispatch(socketSendMessage(reloginParams))
@@ -54,7 +59,6 @@ function App() {
     return (
         <div>
             <Router>
-
                 <Routes>
                     {
                         publicRoutes.map((routeObject, index: number) =>

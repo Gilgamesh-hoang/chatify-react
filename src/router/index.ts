@@ -4,6 +4,7 @@ import Login from "../pages/Login";
 import NoLayout from "../layout/NoLayout";
 import Register from "../pages/Register";
 import Home from "../pages/Home";
+import {ChatBox} from "~/pages/component/chatbox/ChatBox";
 
 export interface RouteType {
     path: string;
@@ -17,4 +18,5 @@ export const publicRoutes:RouteType[] = [
 ]
 export const privateRoutes:RouteType[] = [
     { path: '/', element: Home, layout:DefaultLayout },
+    { path: '/bruh', element: ChatBox, layout:DefaultLayout },
 ]
