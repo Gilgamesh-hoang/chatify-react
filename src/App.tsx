@@ -48,12 +48,19 @@ function App() {
     const RouteRender = (route: RouteType, index: number) => {
         let Layout = route.layout || DefaultLayout
         let Page = route.element
+        let ChildrenNode = route.child
         return (
             <Route key={index} path={route.path} element={
                 <Layout>
                     <Page/>
                 </Layout>
-            }/>
+            }>
+                {
+                    ChildrenNode.map((routeObject, index: number) =>
+                        RouteRender(routeObject, index)
+                    )
+                }
+            </Route>
         )
     };
     return (

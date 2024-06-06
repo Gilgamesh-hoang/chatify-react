@@ -22,7 +22,9 @@ const Sidebar = () => {
 
     useEffect(() => {
         if (socket) {
-            socket.send(JSON.stringify(getUserParams));
+            if (socket.readyState === WebSocket.OPEN) {
+                socket.send(JSON.stringify(getUserParams));
+            }
 
             socket.onmessage = (event: MessageEvent) => {
                 const data = JSON.parse(event.data);
