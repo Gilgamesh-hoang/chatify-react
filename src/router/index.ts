@@ -5,7 +5,6 @@ import NoLayout from "../layout/NoLayout";
 import Register from "../pages/Register";
 import Home from "../pages/Home";
 import MessagePage from "~/pages/component/chatbox/MessagePage";
-import {createBrowserRouter} from "react-router-dom";
 import App from "~/App";
 
 export interface RouteType {
@@ -15,11 +14,11 @@ export interface RouteType {
     child: RouteType[];
 }
 
-
 export const publicRoutes: RouteType[] = [
     {path: '/login', element: Login, layout: NoLayout, child: []},
     {path: '/register', element: Register, layout: NoLayout, child: []},
 ]
+
 export const privateRoutes: RouteType[] = [
     {
         path: '/', element: Home, layout: DefaultLayout, child: [
