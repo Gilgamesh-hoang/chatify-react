@@ -15,5 +15,9 @@ export const get = async <T>(path: string, option: AxiosRequestConfig = {}): Pro
     const response: AxiosResponse<T> = await httpRequest.get<T>(path, option);
     return response.data;
 }
+export const post = async <T>(path: string, option: AxiosRequestConfig = {}): Promise<T> => {
+    const response: AxiosResponse<T> = await httpRequest.post<T>(path, option);
+    return response.data;
+}
 
 export default httpRequest;

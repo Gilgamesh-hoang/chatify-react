@@ -87,7 +87,7 @@ const SideBarItem: React.FC<SideBarProp> = (props) => {
 
             }, 1000);
         }
-    }, [socket, lastMessage,]);
+    }, [socket, ]);
 
     const getTime = (message: LastMessage): string => {
         const currentDate = new Date();
