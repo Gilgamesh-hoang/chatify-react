@@ -1,16 +1,17 @@
-import React, {useEffect, useRef, useState} from 'react'
+import React, {useRef, useState} from 'react'
 import {useSelector} from 'react-redux'
-import {Link, useParams} from 'react-router-dom'
-import Avatar from '~/component/Avatar'
 import {HiDotsVertical} from "react-icons/hi";
 import {FaAngleLeft, FaImage, FaPlus, FaVideo} from "react-icons/fa6";
-import {IoClose} from "react-icons/io5";
-import backgroundImage from '~/assets/wallapaper.jpeg'
 import {IoMdSend} from "react-icons/io";
+import toast, {Toaster} from "react-hot-toast";
+import {Link} from 'react-router-dom'
+import {IoClose} from "react-icons/io5";
+
+import Avatar from '~/component/Avatar'
+import backgroundImage from '~/assets/wallapaper.jpeg'
 import {socketSelector, userSelector} from "~/redux/selector";
 import Loading from "~/component/Loading";
 import uploadFile from "~/helper/uploadFile";
-import toast, {Toaster} from "react-hot-toast";
 
 interface FileUploadProps {
     isImage: boolean;
@@ -18,7 +19,6 @@ interface FileUploadProps {
 }
 
 const MessagePage = () => {
-    const params = useParams()
     const token = localStorage.getItem('token') ?? '';
     const userName = localStorage.getItem('userName') ?? '';
 
@@ -43,11 +43,6 @@ const MessagePage = () => {
     const currentMessage = useRef(null)
     const [selectedFile, setSelectedFile] = useState<FileUploadProps | null>(null);
 
-    useEffect(() => {
-        if (currentMessage.current) {
-            // currentMessage.current.scrollIntoView({behavior : 'smooth', block : 'end'})
-        }
-    }, [allMessage])
 
     const handleUploadImageVideoOpen = () => {
         setOpenImageVideoUpload(prev => !prev)
@@ -62,8 +57,25 @@ const MessagePage = () => {
         if (fileType === 'image') {
             setSelectedFile({isImage: true, file: file});
             setOpenImageVideoUpload(false);
-        }else {
+        } else {
             toast.error('Chỉ chọn hình ảnh', {
+                duration: 3000,
+            });
+        }
+    }
+
+
+    const handleShowVideo = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        // get the file type
+        const fileType = file.type.split('/')[0];
+        if (fileType === 'video') {
+            setSelectedFile({isImage: false, file: file});
+            setOpenImageVideoUpload(false);
+        } else {
+            toast.error('Chỉ chọn video', {
                 duration: 3000,
             });
         }
@@ -78,26 +90,6 @@ const MessagePage = () => {
             setLoading(false);
         }
     }
-
-    useEffect(() => {
-        /**/
-        if (socketConnection) {
-            // socketConnection.emit('message-page',params.userId)
-            //
-            // socketConnection.emit('seen',params.userId)
-            //
-            // socketConnection.on('message-user',(data)=>{
-            //     setDataUser(data)
-            // })
-            //
-            // socketConnection.on('message',(data)=>{
-            //     console.log('message data',data)
-            //     setAllMessage(data)
-            // })
-
-
-        }
-    }, [socketConnection, params?.userId, user])
 
     const handleOnChange = () => {
 
@@ -189,15 +181,15 @@ const MessagePage = () => {
 
                     {/**upload video display */}
                     {
-                        message.videoUrl && (
+                        selectedFile && !selectedFile.isImage && (
                             <div
                                 className='w-full h-full sticky bottom-0 bg-slate-700 bg-opacity-30 flex justify-center items-center rounded overflow-hidden'>
                                 <div className='w-fit p-2 absolute top-0 right-0 cursor-pointer hover:text-red-600'>
-                                    <IoClose size={30}/>
+                                    <IoClose size={30} onClick={() => setSelectedFile(null)}/>
                                 </div>
                                 <div className='bg-white p-3'>
                                     <video
-                                        src={message.videoUrl}
+                                        src={URL.createObjectURL(selectedFile.file)}
                                         className='aspect-square w-full h-full max-w-sm m-2 object-scale-down'
                                         controls
                                         muted
@@ -209,8 +201,7 @@ const MessagePage = () => {
                     }
 
                     {
-                        // loading &&
-                        (
+                        loading && (
                             <div className='w-full h-full flex sticky bottom-0 justify-center items-center'>
                                 <Loading/>
                             </div>
@@ -256,9 +247,10 @@ const MessagePage = () => {
 
                                         <input
                                             type='file'
-                                            accept={'video/*'}
+                                            accept=".mp4,.avi,.mov,.wmv,.mkv"
                                             id='uploadVideo'
                                             className='hidden'
+                                            onChange={handleShowVideo}
                                         />
                                     </form>
                                 </div>
@@ -276,7 +268,7 @@ const MessagePage = () => {
                             value={message.text}
                             onChange={handleOnChange}
                         />
-                        <button type='button' className='text-primary hover:text-secondary' >
+                        <button type='button' className='text-primary hover:text-secondary' onClick={handleUploadFile}>
                             <IoMdSend size={28}/>
                         </button>
                     </form>

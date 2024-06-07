@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const url = `https://api.cloudinary.com/v1_1/dvh2rphf4/image/upload`
+const url = `https://api.cloudinary.com/v1_1/dvh2rphf4/auto/upload`
 
 const uploadFile = async (file: File) => {
     const formData = new FormData()
