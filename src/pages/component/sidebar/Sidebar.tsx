@@ -24,6 +24,7 @@ const Sidebar = () => {
         if (socket) {
             if (socket.readyState === WebSocket.OPEN) {
                 socket.send(JSON.stringify(getUserParams));
+                console.log("socket is sending message")
             }
 
             socket.onmessage = (event: MessageEvent) => {
@@ -41,6 +42,7 @@ const Sidebar = () => {
                             return sideBarProp;
                         }
                     });
+                    console.log('conversationUserData',conversationUserData);
                     setAllUsers(conversationUserData);
                 }
             }
