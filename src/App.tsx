@@ -6,7 +6,7 @@ import {BrowserRouter as Router, Route, Routes} from "react-router-dom";
 import {useDispatch, useSelector} from 'react-redux';
 import {socketSelector, userSelector} from './redux/selector';
 import Login from './pages/Login';
-import { AppDispatch } from './redux/store';
+import {AppDispatch, RootState} from './redux/store';
 import { socketConnect, socketSendMessage } from './redux/socketSlice';
 import { SocketEvent } from './model/SocketEvent';
 
@@ -17,7 +17,8 @@ function App() {
     const userName = localStorage.getItem('userName') ?? '';
     const user = useSelector(userSelector);
     const dispatch = useDispatch<AppDispatch>();
-    const socket = useSelector(socketSelector)
+    // const socket = useSelector(socketSelector)
+    const socket: WebSocket | null = useSelector((state: RootState) => state.app.socket.socket);
 
     useLayoutEffect(()=>{
         console.log("Trying to connect to a websocket...")

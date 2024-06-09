@@ -6,13 +6,14 @@ import * as yup from 'yup';
 import logo from '~/assets/logo.png'
 import {useFormik} from 'formik';
 import {useDispatch, useSelector} from 'react-redux';
-import {AppDispatch} from '~/redux/store';
+import {AppDispatch, RootState} from '~/redux/store';
 import {Link, useNavigate} from 'react-router-dom';
 import clsx from 'clsx';
 import toast, {Toaster} from "react-hot-toast";
 import { socketSelector } from '~/redux/selector';
 import { socketSendMessage } from '~/redux/socketSlice';
 import { SocketEvent } from '~/model/SocketEvent';
+import {setUserName} from "~/redux/userSlice";
 
 const loginSchema = yup.object({
     username: yup.string().required('Email or username is required'),
@@ -28,7 +29,9 @@ type ActionType = "LOGIN" | "REGISTER"
 const Auth = ({action}: { action: ActionType }) => {
     const navigate = useNavigate();
     const dispatch = useDispatch<AppDispatch>();
-    const socket = useSelector(socketSelector);
+    // const socket = useSelector(socketSelector);
+    const socket: WebSocket | null = useSelector((state: RootState) => state.app.socket.socket);
+
     const initialValues: LoginParams = {
         username: '',
         password: ''
@@ -51,7 +54,10 @@ const Auth = ({action}: { action: ActionType }) => {
 
         },
     });
-    const handleLogin = (socket : WebSocket,values: LoginParams) => {
+    const handleLogin = (socket : WebSocket | null,values: LoginParams) => {
+        if (!socket)
+            return;
+
         const loginParams : SocketEvent = {
             action: "onchat",
             data: {
@@ -69,6 +75,10 @@ const Auth = ({action}: { action: ActionType }) => {
                 showToast('success', 'Login Success', 3000);
                 localStorage.setItem('userName',values.username);
                 localStorage.setItem('token',data.data.RE_LOGIN_CODE);
+
+                // set username to redux
+                dispatch(setUserName(values.username));
+
                 navigate('/');
                 // setTimeout(() => {
                 //     window.location.href='/'
@@ -78,9 +88,11 @@ const Auth = ({action}: { action: ActionType }) => {
                 showToast('error', data.mes, 3000);
             }
         }
-
     }
-    const handleRegister = (socket : WebSocket,values: LoginParams) => {
+    const handleRegister = (socket : WebSocket|null,values: LoginParams) => {
+        if (!socket)
+            return;
+
         const registerParams : SocketEvent = {
             action: "onchat",
             data: {
