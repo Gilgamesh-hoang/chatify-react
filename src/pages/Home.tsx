@@ -5,10 +5,14 @@ import {userSelector} from '~/redux/selector';
 import {useSelector} from 'react-redux';
 import clsx from "clsx";
 import logo from '~/assets/logo.png';
+import {RootState} from "~/redux/store";
 
 const Home = () => {
     const location = useLocation();
     const basePath: boolean = location.pathname === '/';
+    // const username = useSelector((state: RootState) => state.user.username);
+    const username = useSelector((state: RootState) => state.app.user.username);
+    console.log( 'username',username)
     return (
         <div className='grid lg:grid-cols-[370px,1fr] h-screen max-h-screen'>
             <section className={clsx('bg-white lg:block', {'hidden': !basePath})}>

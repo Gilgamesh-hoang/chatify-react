@@ -6,12 +6,14 @@ import {SideBarItem} from "~/pages/component/sidebar";
 import NavSideBar from "~/pages/component/NavSideBar";
 import {SocketEvent} from "~/model/SocketEvent";
 import {SideBarProp} from "~/model/SideBarProp";
+import {RootState} from "~/redux/store";
 
 const Sidebar = () => {
     const userName = localStorage.getItem('userName');
     const user: UserState = useSelector(userSelector);
     const [allUsers, setAllUsers] = useState<SideBarProp[]>([]);
-    const socket = useSelector(socketSelector);
+    // const socket = useSelector(socketSelector);
+    const socket: WebSocket | null = useSelector((state: RootState) => state.app.socket.socket);
 
     const getUserParams: SocketEvent = {
         action: 'onchat',

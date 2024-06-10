@@ -9,14 +9,14 @@ export const userInitState: UserState = {
 }
 
 export const userSlice = createSlice({
-    name: 'user',
+    name: 'app/user',
     initialState : userInitState,
     reducers: {
         setUserName: (state, action: PayloadAction<string>) => {
             state.username = action.payload
         },
         logout: (state) => {
-            
+            state.username = '';
         },
         setOnlineUser: (state, action: PayloadAction<Array<string>>) => {
 
