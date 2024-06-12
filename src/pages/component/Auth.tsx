@@ -6,14 +6,18 @@ import * as yup from 'yup';
 import logo from '~/assets/logo.png'
 import {useFormik} from 'formik';
 import {useDispatch, useSelector} from 'react-redux';
-import {AppDispatch} from '~/redux/store';
+import {AppDispatch, RootState} from '~/redux/store';
 import {Link, useNavigate} from 'react-router-dom';
 import clsx from 'clsx';
 import toast, {Toaster} from "react-hot-toast";
 import { socketSelector } from '~/redux/selector';
 import { socketSendMessage } from '~/redux/socketSlice';
 import { SocketEvent } from '~/model/SocketEvent';
+<<<<<<< HEAD
 import { setUserName } from '~/redux/userSlice';
+=======
+import {setUserName} from "~/redux/userSlice";
+>>>>>>> e120e69b8bbc34ee0e069a92b43470283fe996c2
 
 const loginSchema = yup.object({
     username: yup.string().required('Email or username is required'),
@@ -29,7 +33,9 @@ type ActionType = "LOGIN" | "REGISTER"
 const Auth = ({action}: { action: ActionType }) => {
     const navigate = useNavigate();
     const dispatch = useDispatch<AppDispatch>();
-    const socket = useSelector(socketSelector);
+    // const socket = useSelector(socketSelector);
+    const socket: WebSocket | null = useSelector((state: RootState) => state.app.socket.socket);
+
     const initialValues: LoginParams = {
         username: '',
         password: ''
@@ -52,8 +58,16 @@ const Auth = ({action}: { action: ActionType }) => {
 
         },
     });
+<<<<<<< HEAD
     const handleSubmitAuth = (socket : WebSocket,values: LoginParams) => {
         const authParams : SocketEvent = {
+=======
+    const handleLogin = (socket : WebSocket | null,values: LoginParams) => {
+        if (!socket)
+            return;
+
+        const loginParams : SocketEvent = {
+>>>>>>> e120e69b8bbc34ee0e069a92b43470283fe996c2
             action: "onchat",
             data: {
                 event: action,
@@ -66,6 +80,7 @@ const Auth = ({action}: { action: ActionType }) => {
         socket.send(JSON.stringify(authParams));
         socket.onmessage = (event: MessageEvent) => {
             const data = JSON.parse(event.data);
+<<<<<<< HEAD
             if (data.status === "success") {
                 switch (data.event) {
                     case "LOGIN" :
@@ -82,6 +97,37 @@ const Auth = ({action}: { action: ActionType }) => {
                             navigate('/login');
                         }, 3000);
                         break;
+=======
+            if (data.event === 'LOGIN' && data.status === 'success') {
+                showToast('success', 'Login Success', 3000);
+                localStorage.setItem('userName',values.username);
+                localStorage.setItem('token',data.data.RE_LOGIN_CODE);
+
+                // set username to redux
+                dispatch(setUserName(values.username));
+
+                navigate('/');
+                // setTimeout(() => {
+                //     window.location.href='/'
+                // }, 3000);
+            }
+            if (data.event === 'LOGIN' && data.status === 'error') {
+                showToast('error', data.mes, 3000);
+            }
+        }
+    }
+    const handleRegister = (socket : WebSocket|null,values: LoginParams) => {
+        if (!socket)
+            return;
+
+        const registerParams : SocketEvent = {
+            action: "onchat",
+            data: {
+                event: "REGISTER",
+                data: {
+                    user: values.username,
+                    pass: values.password,
+>>>>>>> e120e69b8bbc34ee0e069a92b43470283fe996c2
                 }
             } else {
                 message.error(data.mes);

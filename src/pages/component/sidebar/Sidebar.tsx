@@ -6,15 +6,25 @@ import {SideBarItem} from "~/pages/component/sidebar";
 import NavSideBar from "~/pages/component/NavSideBar";
 import {SocketEvent} from "~/model/SocketEvent";
 import {SideBarProp} from "~/model/SideBarProp";
+<<<<<<< HEAD
 import { AppDispatch } from '~/redux/store';
 import { socketSendMessage } from '~/redux/socketSlice';
+=======
+import {RootState} from "~/redux/store";
+>>>>>>> e120e69b8bbc34ee0e069a92b43470283fe996c2
 
 const Sidebar = () => {
     const userName = localStorage.getItem('userName');
     const user: UserState = useSelector(userSelector);
     const [allUsers, setAllUsers] = useState<SideBarProp[]>([]);
+<<<<<<< HEAD
     const socket = useSelector(socketSelector);
     const dispatch = useDispatch<AppDispatch>()
+=======
+    // const socket = useSelector(socketSelector);
+    const socket: WebSocket | null = useSelector((state: RootState) => state.app.socket.socket);
+
+>>>>>>> e120e69b8bbc34ee0e069a92b43470283fe996c2
     const getUserParams: SocketEvent = {
         action: 'onchat',
         data: {
@@ -23,8 +33,17 @@ const Sidebar = () => {
     }
 
     useEffect(() => {
+<<<<<<< HEAD
         if (socket && user.username) {
             dispatch(socketSendMessage(getUserParams))
+=======
+        if (socket) {
+            if (socket.readyState === WebSocket.OPEN) {
+                socket.send(JSON.stringify(getUserParams));
+                console.log("socket is sending message")
+            }
+
+>>>>>>> e120e69b8bbc34ee0e069a92b43470283fe996c2
             socket.onmessage = (event: MessageEvent) => {
                 const data = JSON.parse(event.data);
                 if (data.event === "GET_USER_LIST" && data.status === "success") {
@@ -39,6 +58,7 @@ const Sidebar = () => {
                             return sideBarProp;
                         }
                     });
+                    console.log('conversationUserData',conversationUserData);
                     setAllUsers(conversationUserData);
                 }
             }

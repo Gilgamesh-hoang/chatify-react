@@ -7,6 +7,7 @@ import {useSelector} from "react-redux";
 import {socketSelector, userSelector} from "~/redux/selector";
 import {SocketEvent} from "~/model/SocketEvent";
 import toast, {Toaster} from "react-hot-toast";
+import {RootState} from "~/redux/store";
 
 
 interface LastMessage {
@@ -20,7 +21,9 @@ interface LastMessage {
 const SideBarItem: React.FC<SideBarProp> = (props) => {
     const user = useSelector(userSelector);
     const userName: string | null = localStorage.getItem('userName');
-    const socket: WebSocket = useSelector(socketSelector);
+    // const socket: WebSocket = useSelector(socketSelector);
+    //get socket from redux
+    const socket: WebSocket | null = useSelector((state: RootState) => state.app.socket.socket);
     const [lastMessage, setLastMessage] = useState<LastMessage | null>(null);
 
     const unseenRef = useRef<boolean>(
@@ -87,7 +90,11 @@ const SideBarItem: React.FC<SideBarProp> = (props) => {
 
             }, 1000);
         }
+<<<<<<< HEAD
     }, [socket]);
+=======
+    }, [socket, ]);
+>>>>>>> e120e69b8bbc34ee0e069a92b43470283fe996c2
 
     const getTime = (message: LastMessage): string => {
         const currentDate = new Date();

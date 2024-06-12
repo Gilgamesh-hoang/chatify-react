@@ -5,7 +5,6 @@ export const setupWebSocket = (dispatch: Dispatch) => {
   const socket = new WebSocket('ws://140.238.54.136:8080/chat/chat');
   socket.onopen = () => {
     console.log('WebSocket connection established');
-    return socket;
   };
   socket.onmessage = (event) => {
     const data = JSON.parse(event.data);
@@ -33,5 +32,6 @@ export const setupWebSocket = (dispatch: Dispatch) => {
   socket.onerror = (error) => {
     console.error('WebSocket error:', error);
   };
+
   return socket;
 };
