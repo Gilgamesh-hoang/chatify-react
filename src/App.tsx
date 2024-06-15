@@ -23,7 +23,7 @@ function App() {
   const socket = useSelector(socketSelector);
   const statusSocket = useSelector(socketStatusSelector);
 
-  useLayoutEffect(() => {
+  useEffect(() => {
     console.log('Trying to connect to a websocket...');
     dispatch(socketConnect(null));
   }, []);

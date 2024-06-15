@@ -3,11 +3,12 @@ import clsx from "clsx";
 import {NavLink} from "react-router-dom";
 import React, {useEffect, useRef, useState} from "react";
 import {SideBarProp} from "~/model/SideBarProp";
-import {useSelector} from "react-redux";
-import {socketSelector, userSelector} from "~/redux/selector";
+import {useDispatch, useSelector} from "react-redux";
+import {socketSelector, socketStatusSelector, userSelector} from "~/redux/selector";
 import {SocketEvent} from "~/model/SocketEvent";
 import toast, {Toaster} from "react-hot-toast";
-import {RootState} from "~/redux/store";
+import {AppDispatch, RootState} from "~/redux/store";
+import {socketReceivedMessage, socketSendMessage, socketUpdateStatus} from "~/redux/socketSlice";
 
 
 interface LastMessage {
@@ -19,7 +20,9 @@ interface LastMessage {
 }
 
 const SideBarItem: React.FC<SideBarProp> = (props) => {
+    const dispatch = useDispatch<AppDispatch>();
     const user = useSelector(userSelector);
+    const statusSocket = useSelector(socketStatusSelector);
     const userName: string | null = localStorage.getItem('userName');
     // const socket: WebSocket = useSelector(socketSelector);
     //get socket from redux
@@ -35,62 +38,67 @@ const SideBarItem: React.FC<SideBarProp> = (props) => {
         localStorage.setItem(`unseen_${props.name}`, JSON.stringify(unseenRef.current));
     }, [unseenRef.current]);
 
+
+    //boolean to stop stack tracing too much
+    let [eventAttached, setEventAttached] = useState<Boolean>(false)
+    const getMessParams: SocketEvent = {
+        action: "onchat",
+        data: {
+            event: "GET_PEOPLE_CHAT_MES",
+            data: {
+                name: props.name,
+                page: 1
+            }
+        }
+    };
+    // Define the handler for the 'message' event.
+    const handleMessage = (event: MessageEvent) => {
+        const data = JSON.parse(event.data);
+        if (data.event === "GET_PEOPLE_CHAT_MES" && data.status === "success") {
+            // Filter the messages for the current user.
+            const messages = data.data.filter((message: LastMessage) => message.name === props.name || message.to === props.name);
+            // Check if there are any messages.
+            if (messages.length > 0) {
+                // Get the first message.
+                const lastMessage = messages[0];
+                // Update the `lastMessage` state.
+                setLastMessage({
+                    ...lastMessage,
+                    createAt: new Date(lastMessage.createAt)
+                });
+
+                // Check if the message is for the current user and it's unseen.
+                if (lastMessage.to === userName && !unseenRef.current) {
+                    // Mark the message as seen.
+                    unseenRef.current = true;
+                    // Update the unseen status in localStorage.
+                    localStorage.setItem(`unseen_${props.name}`, JSON.stringify(true));
+                }
+            }
+        } else if (data.event === "GET_PEOPLE_CHAT_MES" && data.status === "error") {
+            toast.error('Error when get message', {duration: 2000});
+        }
+        socket?.removeEventListener("message", handleMessage)
+        setEventAttached(false)
+    };
     // This effect runs when the `socket` or `lastMessage` changes.
     useEffect(() => {
-        if (socket) {
-            const getMessParams: SocketEvent = {
-                action: "onchat",
-                data: {
-                    event: "GET_PEOPLE_CHAT_MES",
-                    data: {
-                        name: props.name,
-                        page: 1
-                    }
-                }
-            };
-
-            // Define the handler for the 'message' event.
-            const handleMessage = (event: MessageEvent) => {
-                const data = JSON.parse(event.data);
-                if (data.event === "GET_PEOPLE_CHAT_MES" && data.status === "success") {
-                    // Filter the messages for the current user.
-                    const messages = data.data.filter((message: LastMessage) => message.name === props.name || message.to === props.name);
-                    // Check if there are any messages.
-                    if (messages.length > 0) {
-                        // Get the first message.
-                        const lastMessage = messages[0];
-                        // Update the `lastMessage` state.
-                        setLastMessage({
-                            ...lastMessage,
-                            createAt: new Date(lastMessage.createAt)
-                        });
-
-                        // Check if the message is for the current user and it's unseen.
-                        if (lastMessage.to === userName && !unseenRef.current) {
-                            // Mark the message as seen.
-                            unseenRef.current = true;
-                            // Update the unseen status in localStorage.
-                            localStorage.setItem(`unseen_${props.name}`, JSON.stringify(true));
-                        }
-                    }
-                } else if (data.event === "GET_PEOPLE_CHAT_MES" && data.status === "error") {
-                    toast.error('Error when get message', {duration: 2000});
-                }
-            };
-
+        if (eventAttached) return;
+        if (socket && statusSocket == 'open') {
             // Add the 'message' event listener and send the "GET_PEOPLE_CHAT_MES" event after 1 second.
             setTimeout(() => {
                 socket.addEventListener('message', handleMessage);
-                socket.send(JSON.stringify(getMessParams));
-
-                // Remove the 'message' event listener when the component unmounts.
-                return () => {
-                    socket.removeEventListener('message', handleMessage);
-                };
-
+                if (socket.readyState == 1)
+                    socket.send(JSON.stringify(getMessParams));
             }, 1000);
+            setEventAttached(true)
         }
-    }, [socket, ]);
+        // Remove the 'message' event listener when the component unmounts.
+        return () => {
+            setEventAttached(false)
+            socket?.removeEventListener("message", handleMessage)
+        };
+    }, [socket, statusSocket, eventAttached]);
 
     const getTime = (message: LastMessage): string => {
         const currentDate = new Date();

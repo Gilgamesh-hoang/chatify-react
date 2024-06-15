@@ -11,7 +11,7 @@ import NavSideBar from '~/pages/component/NavSideBar';
 import { SocketEvent } from '~/model/SocketEvent';
 import { SideBarProp } from '~/model/SideBarProp';
 import { AppDispatch, RootState } from '~/redux/store';
-import { socketSendMessage } from '~/redux/socketSlice';
+import {socketReceivedMessage, socketSendMessage} from '~/redux/socketSlice';
 
 const Sidebar = () => {
   const user: UserState = useSelector(userSelector);
@@ -30,7 +30,6 @@ const Sidebar = () => {
 
   useEffect(() => {
     if (socket && statusSocket == 'open' && userName) {
-      dispatch(socketSendMessage(getUserParams));
       socket.onmessage = (event: MessageEvent) => {
         const data = JSON.parse(event.data);
         if (data.event === 'GET_USER_LIST' && data.status === 'success') {
@@ -47,8 +46,11 @@ const Sidebar = () => {
           });
           console.log('conversationUserData', conversationUserData);
           setAllUsers(conversationUserData);
+          //reset back to open state
+          dispatch(socketReceivedMessage())
         }
       };
+      dispatch(socketSendMessage(getUserParams));
     }
   }, [socket, statusSocket, userName]);
 

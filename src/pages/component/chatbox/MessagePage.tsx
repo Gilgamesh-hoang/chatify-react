@@ -1,4 +1,4 @@
-import React, {useRef, useState} from 'react'
+import React, {useEffect, useRef, useState} from 'react'
 import {useSelector} from 'react-redux'
 import {HiDotsVertical} from "react-icons/hi";
 import {FaAngleLeft, FaImage, FaPlus, FaVideo} from "react-icons/fa6";
@@ -12,13 +12,25 @@ import backgroundImage from '~/assets/wallapaper.jpeg'
 import {socketSelector, userSelector} from "~/redux/selector";
 import Loading from "~/component/Loading";
 import uploadFile from "~/helper/uploadFile";
+import {MessageBoxProps} from "~/model/MessageBoxProps";
 
 interface FileUploadProps {
     isImage: boolean;
     file: File;
 }
 
+interface Message {
+    from: string
+    type: 0 | 1
+    to: string
+    content: string
+    createAt: string
+}
+
+const defaultMessage:Message = {type: 0, from: "", to:"", content: "", createAt: ""}
+
 const MessagePage = () => {
+
     const token = localStorage.getItem('token') ?? '';
     const userName = localStorage.getItem('userName') ?? '';
 
@@ -29,7 +41,7 @@ const MessagePage = () => {
         name: "",
         email: "",
         profile_pic: "",
-        online: false,
+        online: true,
         _id: ""
     })
     const [openImageVideoUpload, setOpenImageVideoUpload] = useState(false)
@@ -40,9 +52,18 @@ const MessagePage = () => {
     })
     const [loading, setLoading] = useState(false)
     const [allMessage, setAllMessage] = useState([])
-    const currentMessage = useRef(null)
+    const currentMessage = useRef<null | HTMLDivElement>(null)
     const [selectedFile, setSelectedFile] = useState<FileUploadProps | null>(null);
 
+    useEffect(()=>{
+        if(currentMessage.current){
+            currentMessage.current.scrollIntoView({behavior : 'smooth', block : 'end'})
+        }
+    },[allMessage])
+
+    useEffect(()=>{
+
+    },[socketConnection])
 
     const handleUploadImageVideoOpen = () => {
         setOpenImageVideoUpload(prev => !prev)
