@@ -26,7 +26,8 @@ const SideBarItem: React.FC<SideBarProp> = (props) => {
     const userName: string | null = localStorage.getItem('userName');
     // const socket: WebSocket = useSelector(socketSelector);
     //get socket from redux
-    const socket: WebSocket | null = useSelector((state: RootState) => state.app.socket.socket);
+    // const socket: WebSocket | null = useSelector((state: RootState) => state.app.socket.socket);
+    const socket: WebSocket | null = useSelector(socketSelector);
     const [lastMessage, setLastMessage] = useState<LastMessage | null>(null);
 
     const unseenRef = useRef<boolean>(
@@ -90,7 +91,7 @@ const SideBarItem: React.FC<SideBarProp> = (props) => {
                 socket.addEventListener('message', handleMessage);
                 if (socket.readyState == 1)
                     socket.send(JSON.stringify(getMessParams));
-            }, 1000);
+            }, 50);
             setEventAttached(true)
         }
         // Remove the 'message' event listener when the component unmounts.
@@ -130,7 +131,7 @@ const SideBarItem: React.FC<SideBarProp> = (props) => {
     return (
         <>
             <Toaster position={"top-center"}/>
-            <NavLink to={``} key={props.name}
+            <NavLink to={`/${props.type == 0?'u':'g'}/${props.name}`} key={props.name}
                      onClick={handleSeen}
                      className='flex items-center gap-2 py-3 px-2 border border-transparent hover:border-primary rounded hover:bg-slate-100 cursor-pointer'>
                 <div>

@@ -4,15 +4,16 @@ import {HiDotsVertical} from "react-icons/hi";
 import {FaAngleLeft, FaImage, FaPlus, FaVideo} from "react-icons/fa6";
 import {IoMdSend} from "react-icons/io";
 import toast, {Toaster} from "react-hot-toast";
-import {Link} from 'react-router-dom'
+import { Link, useLocation, useParams } from 'react-router-dom';
 import {IoClose} from "react-icons/io5";
 
 import Avatar from '~/component/Avatar'
 import backgroundImage from '~/assets/wallapaper.jpeg'
-import {socketSelector, userSelector} from "~/redux/selector";
+import { socketSelector, socketStatusSelector, userSelector } from '~/redux/selector';
 import Loading from "~/component/Loading";
 import uploadFile from "~/helper/uploadFile";
-import {MessageBoxProps} from "~/model/MessageBoxProps";
+import {MessagePageProps} from "~/model/MessagePageProps";
+import { SocketEvent } from '~/model/SocketEvent';
 
 interface FileUploadProps {
     isImage: boolean;
@@ -27,22 +28,22 @@ interface Message {
     createAt: string
 }
 
-const defaultMessage:Message = {type: 0, from: "", to:"", content: "", createAt: ""}
-
 const MessagePage = () => {
+    //Get id
+    const {id} = useParams();
+    //Get status socket
+    const statusSocket = useSelector(socketStatusSelector);
 
     const token = localStorage.getItem('token') ?? '';
     const userName = localStorage.getItem('userName') ?? '';
-
-    const socketConnection = useSelector(socketSelector)
     const user = useSelector(userSelector)
+    const socketConnection = useSelector(socketSelector)
 
     const [dataUser, setDataUser] = useState({
-        name: "",
-        email: "",
+        name: id || "error",
+        type: 0,
         profile_pic: "",
-        online: true,
-        _id: ""
+        online: false,
     })
     const [openImageVideoUpload, setOpenImageVideoUpload] = useState(false)
     const [message, setMessage] = useState({
@@ -55,15 +56,41 @@ const MessagePage = () => {
     const currentMessage = useRef<null | HTMLDivElement>(null)
     const [selectedFile, setSelectedFile] = useState<FileUploadProps | null>(null);
 
+    const CHECK_USERS:SocketEvent = {
+        "action":"onchat",
+        "data": {
+            "event": "CHECK_USER",
+            "data": {
+                "user": dataUser?.name
+            }
+        }
+    };
+    //when allMessage updates, try to scroll to newest message
     useEffect(()=>{
         if(currentMessage.current){
             currentMessage.current.scrollIntoView({behavior : 'smooth', block : 'end'})
         }
     },[allMessage])
 
+    //uhh
     useEffect(()=>{
-
-    },[socketConnection])
+        if (socketConnection) {
+            const handler = (evt:MessageEvent) => {
+                const response = JSON.parse(evt.data);
+                if (response.event === "CHECK_USER" && response.status === "success") {
+                    setDataUser((prev) => {
+                        return {...prev, online: response.data.status};
+                    })
+                } else if (response.event === "CHECK_USER" && response.status === "error") {
+                    toast.error('Error when get status of '.concat(id || "unknown"), {duration: 2000});
+                }
+                socketConnection.removeEventListener('message', handler);
+            };
+            //check active user
+            socketConnection.addEventListener('message', handler);
+            socketConnection.send(JSON.stringify(CHECK_USERS));
+        }
+    },[socketConnection, statusSocket])
 
     const handleUploadImageVideoOpen = () => {
         setOpenImageVideoUpload(prev => !prev)
@@ -84,7 +111,6 @@ const MessagePage = () => {
             });
         }
     }
-
 
     const handleShowVideo = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -112,6 +138,7 @@ const MessagePage = () => {
         }
     }
 
+    //onChange
     const handleOnChange = () => {
 
     }
@@ -134,7 +161,7 @@ const MessagePage = () => {
                                 height={50}
                                 imageUrl={dataUser?.profile_pic}
                                 name={dataUser?.name}
-                                type={0}
+                                type={dataUser?.type}
                             />
                         </div>
                         <div>
