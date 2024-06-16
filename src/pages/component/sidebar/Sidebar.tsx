@@ -46,13 +46,13 @@ const Sidebar = () => {
           });
           console.log('conversationUserData', conversationUserData);
           setAllUsers(conversationUserData);
-          //reset back to open state
-          dispatch(socketReceivedMessage())
+          // dispatch(socketReceivedMessage());
         }
       };
+      // socket.send(JSON.stringify(getUserParams))
       dispatch(socketSendMessage(getUserParams));
     }
-  }, [socket, statusSocket, userName]);
+  }, [socket, userName, statusSocket]);
 
   return (
     <div className="w-full h-full grid grid-cols-[48px,1fr] bg-white">
@@ -70,7 +70,6 @@ const Sidebar = () => {
               Explore users to start a conversation with.
             </p>
           )}
-
           {allUsers.map((user, index) => (
             <SideBarItem key={index} {...user} />
           ))}
