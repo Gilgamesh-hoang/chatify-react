@@ -1,5 +1,5 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { useSelector } from 'react-redux';
+import React, { ChangeEvent, FormEvent, useEffect, useRef, useState } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
 import { HiDotsVertical } from 'react-icons/hi';
 import { FaAngleLeft, FaImage, FaPlus, FaVideo } from 'react-icons/fa6';
 import { IoMdSend } from 'react-icons/io';
@@ -14,6 +14,8 @@ import Loading from '~/component/Loading';
 import uploadFile from '~/helper/uploadFile';
 import { MessagePageProps } from '~/model/MessagePageProps';
 import { SocketEvent } from '~/model/SocketEvent';
+import { socketSendMessage } from '~/redux/socketSlice';
+import { AppDispatch } from '~/redux/store';
 
 interface FileUploadProps {
   isImage: boolean;
@@ -30,16 +32,17 @@ interface Message {
 
 const MessagePage = () => {
   //Get id
-  const { id } = useParams();
+  const { type, name } = useParams();
   //Get status socket
   const statusSocket = useSelector(socketStatusSelector);
+  const dispatch = useDispatch<AppDispatch>()
 
   const user = useSelector(userSelector);
   const socketConnection = useSelector(socketSelector);
 
   const [dataUser, setDataUser] = useState({
-    name: id || 'error',
-    type: 0,
+    name: name || '',
+    type: type == 'u' ? 0 : (type == 'g' ? 1 : -1),
     profile_pic: '',
     online: false,
   });
@@ -59,7 +62,19 @@ const MessagePage = () => {
     'data': {
       'event': 'CHECK_USER',
       'data': {
-        'user': id,
+        'user': name,
+      },
+    },
+  };
+
+  const SEND_MESSAGES: SocketEvent = {
+    'action': 'onchat',
+    'data': {
+      'event': 'SEND_CHAT',
+      'data': {
+        'type': type == 'u' ? 'people' : (type == 'g' ? 'room' : ''),
+        'to': name,
+        'mes': message.text,
       },
     },
   };
@@ -79,23 +94,29 @@ const MessagePage = () => {
         return { ...prev, online: response.data.status };
       });
     } else if (response.event === 'CHECK_USER' && response.status === 'error') {
-      toast.error('Error when get status of '.concat(id || 'unknown'), { duration: 2000 });
+      toast.error('Error when get status of '.concat(name || 'unknown'), { duration: 2000 });
     }
   };
-  //uhh
   useEffect(() => {
+    let interval: string | number | NodeJS.Timer | undefined;
     if (socketConnection) {
+      if (type != 'u') return;
       //check active user
-      setTimeout(() => {
-        socketConnection.addEventListener('message', handleStatusCheck);
+      socketConnection.addEventListener('message', handleStatusCheck);
+      interval = setInterval(() => {
         if (socketConnection.readyState == 1)
           socketConnection.send(JSON.stringify(CHECK_USERS));
-      }, 50);
+      }, 1000);
     }
     return () => {
       socketConnection.removeEventListener('message', handleStatusCheck);
+      clearInterval(interval)
     };
-  }, [socketConnection, id, dataUser]);
+  }, [socketConnection]);
+
+  useEffect(() => {
+
+  }, [socketConnection]);
 
   const handleUploadImageVideoOpen = () => {
     setOpenImageVideoUpload(prev => !prev);
@@ -144,9 +165,32 @@ const MessagePage = () => {
   };
 
   //onChange
-  const handleOnChange = () => {
-
+  const handleOnChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value} = event.target
+    setMessage(prev => {
+      return{
+        ...prev,
+        text : value
+      }
+    })
   };
+
+  //sending time
+  const handleSendMessage = (event: FormEvent<HTMLFormElement>)=>{
+    event.preventDefault()
+
+    if(message.text || message.imageUrl || message.videoUrl){
+      if(socketConnection){
+        socketConnection.send(JSON.stringify(SEND_MESSAGES))
+        // dispatch(socketSendMessage());
+        setMessage({
+          text : "",
+          imageUrl : "",
+          videoUrl : ""
+        })
+      }
+    }
+  }
 
   return (
     <>
@@ -313,7 +357,7 @@ const MessagePage = () => {
           </div>
 
           {/**input box */}
-          <form className="h-full w-full flex gap-2">
+          <form className="h-full w-full flex gap-2" onSubmit={handleSendMessage}>
             <input
               type="text"
               placeholder="Type here message..."
@@ -321,7 +365,7 @@ const MessagePage = () => {
               value={message.text}
               onChange={handleOnChange}
             />
-            <button type="button" className="text-primary hover:text-secondary" onClick={handleUploadFile}>
+            <button type="submit" className="text-primary hover:text-secondary" onClick={handleUploadFile}>
               <IoMdSend size={28} />
             </button>
           </form>

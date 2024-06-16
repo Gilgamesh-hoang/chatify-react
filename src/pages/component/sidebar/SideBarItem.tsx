@@ -1,14 +1,12 @@
 import Avatar from '~/component/Avatar';
 import clsx from 'clsx';
-import { NavLink } from 'react-router-dom';
+import { NavLink, useParams } from 'react-router-dom';
 import React, { useEffect, useRef, useState } from 'react';
 import { SideBarProp } from '~/model/SideBarProp';
 import { useDispatch, useSelector } from 'react-redux';
 import { socketSelector, socketStatusSelector, userSelector } from '~/redux/selector';
 import { SocketEvent } from '~/model/SocketEvent';
 import toast, { Toaster } from 'react-hot-toast';
-import { AppDispatch, RootState } from '~/redux/store';
-import { socketReceivedMessage, socketSendMessage, socketUpdateStatus } from '~/redux/socketSlice';
 
 
 interface LastMessage {
@@ -20,6 +18,7 @@ interface LastMessage {
 }
 
 const SideBarItem: React.FC<SideBarProp> = (props) => {
+  const { name } = useParams();
   const user = useSelector(userSelector);
   const userName: string | null = localStorage.getItem('userName');
   // const socket: WebSocket | null = useSelector((state: RootState) => state.app.socket.socket);
@@ -79,9 +78,10 @@ const SideBarItem: React.FC<SideBarProp> = (props) => {
 
   // This effect runs when the `socket` or `lastMessage` changes.
   useEffect(() => {
+    let timeout: string | number | NodeJS.Timeout | undefined;
     if (socket) {
       // Add the 'message' event listener and send the "GET_PEOPLE_CHAT_MES" event after 1 second.
-      setTimeout(() => {
+      timeout = setTimeout(() => {
         socket.addEventListener('message', handleMessage);
         if (socket.readyState == 1)
           socket.send(JSON.stringify(getMessParams));
@@ -90,6 +90,7 @@ const SideBarItem: React.FC<SideBarProp> = (props) => {
     // Remove the 'message' event listener when the component unmounts.
     return () => {
       socket?.removeEventListener('message', handleMessage);
+      clearTimeout(timeout);
     };
   }, [socket, lastMessage]);
 
@@ -125,7 +126,9 @@ const SideBarItem: React.FC<SideBarProp> = (props) => {
       <Toaster position={'top-center'} />
       <NavLink to={`/${props.type == 0 ? 'u' : 'g'}/${props.name}`} key={props.name}
                onClick={handleSeen}
-               className="flex items-center gap-2 py-3 px-2 border border-transparent hover:border-primary rounded hover:bg-slate-100 cursor-pointer">
+               className=
+                 {clsx('flex items-center gap-2 py-3 px-2 border border-transparent hover:border-primary rounded hover:bg-slate-100 cursor-pointer',
+                   props.name == name ? 'bg-slate-200 ' : '')}>
         <div>
           <Avatar
             type={props.type}

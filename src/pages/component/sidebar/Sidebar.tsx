@@ -12,8 +12,10 @@ import { SocketEvent } from '~/model/SocketEvent';
 import { SideBarProp } from '~/model/SideBarProp';
 import { AppDispatch, RootState } from '~/redux/store';
 import {socketReceivedMessage, socketSendMessage} from '~/redux/socketSlice';
+import { useParams } from 'react-router-dom';
 
 const Sidebar = () => {
+  const {type, name} = useParams();
   const user: UserState = useSelector(userSelector);
   const userName = user.username;
   const [allUsers, setAllUsers] = useState<SideBarProp[]>([]);
