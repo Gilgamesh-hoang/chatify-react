@@ -1,6 +1,6 @@
 import Avatar from '~/component/Avatar';
 import clsx from 'clsx';
-import { NavLink, useParams } from 'react-router-dom';
+import { Link, NavLink, useNavigate, useNavigation, useParams } from 'react-router-dom';
 import React, { useEffect, useRef, useState } from 'react';
 import { SideBarProp } from '~/model/SideBarProp';
 import { useDispatch, useSelector } from 'react-redux';
@@ -118,13 +118,14 @@ const SideBarItem: React.FC<SideBarProp> = (props) => {
   const handleSeen = () => {
     unseenRef.current = false;
     localStorage.setItem(`unseen_${props.name}`, JSON.stringify(false));
+
     // setUnseen(false);
   };
 
   return (
     <>
       <Toaster position={'top-center'} />
-      <NavLink to={`/${props.type == 0 ? 'u' : 'g'}/${props.name}`} key={props.name}
+      <NavLink to={`/${props.type}/${props.name}`} key={props.name}
                onClick={handleSeen}
                className=
                  {clsx('flex items-center gap-2 py-3 px-2 border border-transparent hover:border-primary rounded hover:bg-slate-100 cursor-pointer',

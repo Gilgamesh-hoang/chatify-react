@@ -9,43 +9,46 @@ import { IoClose } from 'react-icons/io5';
 
 import Avatar from '~/component/Avatar';
 import backgroundImage from '~/assets/wallapaper.jpeg';
-import { socketSelector, socketStatusSelector, userSelector } from '~/redux/selector';
+import { currentChatSelector, socketSelector, socketStatusSelector, userSelector } from '~/redux/selector';
 import Loading from '~/component/Loading';
 import uploadFile from '~/helper/uploadFile';
 import { MessagePageProps } from '~/model/MessagePageProps';
 import { SocketEvent } from '~/model/SocketEvent';
 import { socketSendMessage } from '~/redux/socketSlice';
 import { AppDispatch } from '~/redux/store';
+import { resetComponent } from 'antd/es/style';
+import useForceUpdate from 'antd/es/_util/hooks/useForceUpdate';
+import { setCurrentChat } from '~/redux/currentChatSlice';
 
 interface FileUploadProps {
   isImage: boolean;
   file: File;
 }
 
-interface Message {
-  from: string;
-  type: 0 | 1;
-  to: string;
-  content: string;
-  createAt: string;
-}
+// interface Message {
+//   from: string;
+//   type: 0 | 1;
+//   to: string;
+//   content: string;
+//   createAt: string;
+// }
 
 const MessagePage = () => {
-  //Get id
-  const { type, name } = useParams();
-  //Get status socket
-  const statusSocket = useSelector(socketStatusSelector);
-  const dispatch = useDispatch<AppDispatch>()
-
+  //all selector
   const user = useSelector(userSelector);
   const socketConnection = useSelector(socketSelector);
+  const currentChat = useSelector(currentChatSelector);
+  const statusSocket = useSelector(socketStatusSelector);
 
-  const [dataUser, setDataUser] = useState({
-    name: name || '',
-    type: type == 'u' ? 0 : (type == 'g' ? 1 : -1),
-    profile_pic: '',
-    online: false,
-  });
+  //try to set current chat
+  const { type, name } = useParams();
+  const dispatch = useDispatch<AppDispatch>();
+  dispatch(setCurrentChat({
+    ...currentChat,
+    'type': type ? parseInt(type) : -1,
+    'name': name || '',
+  }));
+
   const [openImageVideoUpload, setOpenImageVideoUpload] = useState(false);
   const [message, setMessage] = useState({
     text: '',
@@ -62,7 +65,7 @@ const MessagePage = () => {
     'data': {
       'event': 'CHECK_USER',
       'data': {
-        'user': name,
+        'user': currentChat.name,
       },
     },
   };
@@ -72,8 +75,8 @@ const MessagePage = () => {
     'data': {
       'event': 'SEND_CHAT',
       'data': {
-        'type': type == 'u' ? 'people' : (type == 'g' ? 'room' : ''),
-        'to': name,
+        'type': currentChat.type == 0 ? 'people' : (currentChat.type == 1 ? 'room' : ''),
+        'to': currentChat.name,
         'mes': message.text,
       },
     },
@@ -90,33 +93,30 @@ const MessagePage = () => {
   const handleStatusCheck = (evt: MessageEvent) => {
     const response = JSON.parse(evt.data);
     if (response.event === 'CHECK_USER' && response.status === 'success') {
-      setDataUser((prev) => {
-        return { ...prev, online: response.data.status };
-      });
+      dispatch(setCurrentChat({ ...currentChat, online: response.data.status }));
     } else if (response.event === 'CHECK_USER' && response.status === 'error') {
       toast.error('Error when get status of '.concat(name || 'unknown'), { duration: 2000 });
     }
   };
   useEffect(() => {
-    let interval: string | number | NodeJS.Timer | undefined;
+    let interval: NodeJS.Timer;
+    if (currentChat.type != 0) return;
     if (socketConnection) {
-      if (type != 'u') return;
+      console.log("trigger")
       //check active user
       socketConnection.addEventListener('message', handleStatusCheck);
       interval = setInterval(() => {
-        if (socketConnection.readyState == 1)
+        if (socketConnection.readyState === 1) {
           socketConnection.send(JSON.stringify(CHECK_USERS));
+        }
       }, 1000);
     }
     return () => {
+      console.log("detached")
       socketConnection.removeEventListener('message', handleStatusCheck);
-      clearInterval(interval)
+      clearInterval(interval);
     };
-  }, [socketConnection]);
-
-  useEffect(() => {
-
-  }, [socketConnection]);
+  }, [socketConnection, currentChat]);
 
   const handleUploadImageVideoOpen = () => {
     setOpenImageVideoUpload(prev => !prev);
@@ -166,31 +166,31 @@ const MessagePage = () => {
 
   //onChange
   const handleOnChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value} = event.target
+    const { name, value } = event.target;
     setMessage(prev => {
-      return{
+      return {
         ...prev,
-        text : value
-      }
-    })
+        text: value,
+      };
+    });
   };
 
   //sending time
-  const handleSendMessage = (event: FormEvent<HTMLFormElement>)=>{
-    event.preventDefault()
+  const handleSendMessage = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
 
-    if(message.text || message.imageUrl || message.videoUrl){
-      if(socketConnection){
-        socketConnection.send(JSON.stringify(SEND_MESSAGES))
+    if (message.text || message.imageUrl || message.videoUrl) {
+      if (socketConnection) {
+        socketConnection.send(JSON.stringify(SEND_MESSAGES));
         // dispatch(socketSendMessage());
         setMessage({
-          text : "",
-          imageUrl : "",
-          videoUrl : ""
-        })
+          text: '',
+          imageUrl: '',
+          videoUrl: '',
+        });
       }
     }
-  }
+  };
 
   return (
     <>
@@ -198,7 +198,7 @@ const MessagePage = () => {
         position="top-center"
         reverseOrder={false}
       />
-      <div style={{ backgroundImage: `url(${backgroundImage})` }} className="bg-no-repeat bg-cover">
+      <div style={{ backgroundImage: `url(${backgroundImage})` }} className="bg-no-repeat bg-cover" key={name}>
         <header className="sticky top-0 h-16 bg-white flex justify-between items-center px-4">
           <div className="flex items-center gap-4">
             <Link to={'/'} className="lg:hidden">
@@ -208,16 +208,16 @@ const MessagePage = () => {
               <Avatar
                 width={50}
                 height={50}
-                imageUrl={dataUser?.profile_pic}
-                name={dataUser?.name}
-                type={dataUser?.type}
+                imageUrl={currentChat.profile_pic}
+                name={currentChat.name}
+                type={currentChat.type}
               />
             </div>
             <div>
-              <h3 className="font-semibold text-lg my-0 text-ellipsis line-clamp-1">{dataUser?.name}</h3>
+              <h3 className="font-semibold text-lg my-0 text-ellipsis line-clamp-1">{currentChat.name}</h3>
               <p className="-my-2 text-sm">
                 {
-                  dataUser.online ? <span className="text-primary">online</span> :
+                  currentChat.online ? <span className="text-primary">online</span> :
                     <span className="text-slate-400">offline</span>
                 }
               </p>

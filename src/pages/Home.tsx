@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useReducer } from 'react';
 import { Outlet, useLocation } from 'react-router';
 import { Sidebar } from '~/pages/component/sidebar';
 import { userSelector } from '~/redux/selector';
@@ -6,12 +6,14 @@ import { useSelector } from 'react-redux';
 import clsx from 'clsx';
 import logo from '~/assets/logo.png';
 import { RootState } from '~/redux/store';
+import useForceUpdate from 'antd/es/_util/hooks/useForceUpdate';
 
 const Home = () => {
   const location = useLocation();
   const basePath: boolean = location.pathname === '/';
   // const username = useSelector((state: RootState) => state.user.username);
   const username = useSelector((state: RootState) => state.app.user.username);
+
   return (
     <div className="grid lg:grid-cols-[370px,1fr] h-screen max-h-screen">
       <section className={clsx('bg-white lg:block', { hidden: !basePath })}>
