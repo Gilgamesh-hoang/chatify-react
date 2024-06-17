@@ -11,9 +11,11 @@ import NavSideBar from '~/pages/component/NavSideBar';
 import { SocketEvent } from '~/model/SocketEvent';
 import { SideBarProp } from '~/model/SideBarProp';
 import { AppDispatch, RootState } from '~/redux/store';
-import { socketSendMessage } from '~/redux/socketSlice';
+import {socketReceivedMessage, socketSendMessage} from '~/redux/socketSlice';
+import { useParams } from 'react-router-dom';
 
 const Sidebar = () => {
+  const {type, name} = useParams();
   const user: UserState = useSelector(userSelector);
   const userName = user.username;
   const [allUsers, setAllUsers] = useState<SideBarProp[]>([]);
@@ -30,7 +32,6 @@ const Sidebar = () => {
 
   useEffect(() => {
     if (socket && statusSocket == 'open' && userName) {
-      dispatch(socketSendMessage(getUserParams));
       socket.onmessage = (event: MessageEvent) => {
         const data = JSON.parse(event.data);
         if (data.event === 'GET_USER_LIST' && data.status === 'success') {
@@ -47,10 +48,13 @@ const Sidebar = () => {
           });
           console.log('conversationUserData', conversationUserData);
           setAllUsers(conversationUserData);
+          // dispatch(socketReceivedMessage());
         }
       };
+      // socket.send(JSON.stringify(getUserParams))
+      dispatch(socketSendMessage(getUserParams));
     }
-  }, [socket, statusSocket, userName]);
+  }, [socket, userName, statusSocket]);
 
   return (
     <div className="w-full h-full grid grid-cols-[48px,1fr] bg-white">
@@ -68,7 +72,6 @@ const Sidebar = () => {
               Explore users to start a conversation with.
             </p>
           )}
-
           {allUsers.map((user, index) => (
             <SideBarItem key={index} {...user} />
           ))}

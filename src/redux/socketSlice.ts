@@ -2,6 +2,7 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 import { userInitState, UserState } from './userSlice';
 import { SocketEvent } from '~/model/SocketEvent';
+import { ChatInfo, initCurrentChat } from '~/redux/currentChatSlice';
 export type StatusSocket =
   | 'connecting'
   | 'open'
@@ -12,12 +13,14 @@ export interface SocketState {
   socket: WebSocket | null;
   statusSocket: StatusSocket;
   user: UserState;
+  currentChat: ChatInfo;
 }
 
 export const socketInitState: SocketState = {
   user: userInitState,
   socket: null,
   statusSocket: 'closed',
+  currentChat: initCurrentChat,
 };
 
 export const socketSlice = createSlice({

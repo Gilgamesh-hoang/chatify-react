@@ -22,8 +22,7 @@ export const publicRoutes: RouteType[] = [
 export const privateRoutes: RouteType[] = [
     {
         path: '/', element: Home, layout: DefaultLayout, child: [
-            {path: 'u/:id', element: MessagePage, layout: DefaultLayout, child: []},
-            {path: 'g/:id', element: MessagePage, layout: DefaultLayout, child: []},
+            {path: ':type/:name', element: MessagePage, layout: DefaultLayout, child: []},
         ]
     },
 ]
