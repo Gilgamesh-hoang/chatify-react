@@ -51,9 +51,11 @@ const NavSideBar : React.FC<NavSideBarProps> = ({name}) => {
                 </button>
                 <button
                     title="Logout"
-                    className='w-12 h-12 flex justify-center items-center cursor-pointer hover:bg-slate-200 rounded'>
+                    className='w-12 h-12 flex justify-center items-center cursor-pointer hover:bg-slate-200 rounded'
+                    onClick={handleLogout}
+                    >
                             <span className='-ml-2'>
-                                <BiLogOut onClick={handleLogout} size={25}/>
+                                <BiLogOut  size={25}/>
                             </span>
                 </button>
             </div>

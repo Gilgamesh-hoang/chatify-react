@@ -2,40 +2,57 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 import { userInitState, UserState } from './userSlice';
 import { SocketEvent } from '~/model/SocketEvent';
-
+import { ChatInfo, initCurrentChat } from '~/redux/currentChatSlice';
+export type StatusSocket =
+  | 'connecting'
+  | 'open'
+  | 'closed'
+  | 'error'
+  | 'sending';
 export interface SocketState {
   socket: WebSocket | null;
-  statusSocket : 'connecting' | 'open' | 'closed' | 'error';
+  statusSocket: StatusSocket;
   user: UserState;
+  currentChat: ChatInfo;
 }
 
 export const socketInitState: SocketState = {
   user: userInitState,
   socket: null,
-  statusSocket : 'closed'
+  statusSocket: 'closed',
+  currentChat: initCurrentChat,
 };
 
 export const socketSlice = createSlice({
   name: 'socket',
   initialState: socketInitState,
   reducers: {
-    socketConnect: (state,action :PayloadAction<WebSocket | null>) => {
-      state.socket = action.payload
-      console.log(' connected')
+    socketConnect: (state, action: PayloadAction<WebSocket | null>) => {
+      state.socket = action.payload;
     },
     socketDisconnect: (state) => {
       if (state.socket) {
         state.socket.close();
       }
       state.socket = null;
-      console.log('disconnected')
+      state.statusSocket = 'closed';
+      console.log('disconnected');
     },
     socketSendMessage: (state, action: PayloadAction<SocketEvent>) => {
-      state.socket?.send(JSON.stringify(action.payload));
+      if (state.statusSocket == 'open') {
+        console.log('send message ', action.payload);
+        state.statusSocket = 'sending';
+        state.socket?.send(JSON.stringify(action.payload));
+      }
     },
-    socketReceiveMessage: (state, action: PayloadAction<any>) => {
-      // Handle received message
-      console.log('Message received:', action.payload);
+    socketReceivedMessage: (state) => {
+      state.statusSocket = 'open';
+    },
+    socketUpdateStatus: (
+      state,
+      action: { type: string; payload: StatusSocket }
+    ) => {
+      state.statusSocket = action.payload;
     },
   },
 });
@@ -44,7 +61,8 @@ export const {
   socketConnect,
   socketDisconnect,
   socketSendMessage,
-  socketReceiveMessage,
+  socketReceivedMessage,
+  socketUpdateStatus,
 } = socketSlice.actions;
 
 export default socketSlice.reducer;
