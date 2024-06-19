@@ -8,10 +8,10 @@ import {
 import { UserState } from '~/redux/userSlice';
 import { SideBarItem } from '~/pages/component/sidebar';
 import NavSideBar from '~/pages/component/NavSideBar';
-import { SocketEvent } from '~/model/SocketEvent';
+import { NameSocketEvent, SocketEvent } from '~/model/SocketEvent';
 import { SideBarProp } from '~/model/SideBarProp';
 import { AppDispatch, RootState } from '~/redux/store';
-import { socketSendMessage } from '~/redux/socketSlice';
+import { socketReceivedMessage, socketSendMessage } from '~/redux/socketSlice';
 
 const Sidebar = () => {
   const user: UserState = useSelector(userSelector);
@@ -29,11 +29,15 @@ const Sidebar = () => {
   };
 
   useEffect(() => {
-    if (socket && statusSocket == 'open' && userName) {
+    if (socket && statusSocket == 'open' && userName && allUsers.length == 0) {
       dispatch(socketSendMessage(getUserParams));
       socket.onmessage = (event: MessageEvent) => {
         const data = JSON.parse(event.data);
-        if (data.event === 'GET_USER_LIST' && data.status === 'success') {
+        dispatch(socketReceivedMessage());
+        if (
+          (data.event as NameSocketEvent) === 'GET_USER_LIST' &&
+          data.status === 'success'
+        ) {
           const conversationUserData = data.data.filter((conv: any) => {
             if (conv.name != userName) {
               let sideBarProp: SideBarProp = {
@@ -50,7 +54,7 @@ const Sidebar = () => {
         }
       };
     }
-  }, [socket, statusSocket, userName]);
+  }, [socket, statusSocket, userName, allUsers]);
 
   return (
     <div className="w-full h-full grid grid-cols-[48px,1fr] bg-white">

@@ -1,5 +1,6 @@
 import { message } from 'antd';
 import { Dispatch } from 'redux';
+import { setOnlinePartner } from '~/redux/partnerSlice';
 import { socketUpdateStatus } from '~/redux/socketSlice';
 import { setUserName } from '~/redux/userSlice';
 
@@ -24,6 +25,9 @@ export const setupWebSocket = (dispatch: Dispatch) => {
           }
           localStorage.setItem('token', data.data.RE_LOGIN_CODE);
           dispatch(setUserName(username!));
+          break;
+        case 'CHECK_USER':
+          dispatch(setOnlinePartner(data.data.status));
           break;
       }
     } else if (data.status === 'error') {
