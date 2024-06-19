@@ -1,10 +1,10 @@
-import React, { ChangeEvent, FormEvent, useEffect, useRef, useState } from 'react';
+import React, { FormEvent, useEffect, useRef, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { HiDotsVertical } from 'react-icons/hi';
 import { FaAngleLeft, FaImage, FaPlus, FaVideo } from 'react-icons/fa6';
 import { IoMdSend } from 'react-icons/io';
 import toast, { Toaster } from 'react-hot-toast';
-import { Link, useLocation, useParams } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 import { IoClose } from 'react-icons/io5';
 
 import Avatar from '~/component/Avatar';
@@ -12,43 +12,33 @@ import backgroundImage from '~/assets/wallapaper.jpeg';
 import { currentChatSelector, socketSelector, socketStatusSelector, userSelector } from '~/redux/selector';
 import Loading from '~/component/Loading';
 import uploadFile from '~/helper/uploadFile';
-import { MessagePageProps } from '~/model/MessagePageProps';
 import { SocketEvent } from '~/model/SocketEvent';
-import { socketSendMessage } from '~/redux/socketSlice';
 import { AppDispatch } from '~/redux/store';
-import { resetComponent } from 'antd/es/style';
-import useForceUpdate from 'antd/es/_util/hooks/useForceUpdate';
-import { setCurrentChat } from '~/redux/currentChatSlice';
+import { initCurrentChat, Message, setCurrentChat, } from '~/redux/currentChatSlice';
+import moment from 'moment';
 
 interface FileUploadProps {
   isImage: boolean;
   file: File;
 }
 
-// interface Message {
-//   from: string;
-//   type: 0 | 1;
-//   to: string;
-//   content: string;
-//   createAt: string;
-// }
-
 const MessagePage = () => {
-  //all selector
-  const user = useSelector(userSelector);
-  const socketConnection = useSelector(socketSelector);
-  const currentChat = useSelector(currentChatSelector);
-  const statusSocket = useSelector(socketStatusSelector);
-
   //try to set current chat
   const { type, name } = useParams();
   const dispatch = useDispatch<AppDispatch>();
   dispatch(setCurrentChat({
-    ...currentChat,
+    ...initCurrentChat,
     'type': type ? parseInt(type) : -1,
     'name': name || '',
   }));
 
+  //all selector
+  const user = useSelector(userSelector);
+  const webSocket = useSelector(socketSelector);
+  const currentChat = useSelector(currentChatSelector);
+  const statusSocket = useSelector(socketStatusSelector);
+
+  const [userOnline, setUserOnline] = useState<boolean>(false);
   const [openImageVideoUpload, setOpenImageVideoUpload] = useState(false);
   const [message, setMessage] = useState({
     text: '',
@@ -56,11 +46,11 @@ const MessagePage = () => {
     videoUrl: '',
   });
   const [loading, setLoading] = useState(false);
-  const [allMessage, setAllMessage] = useState([]);
+  const [allMessage, setAllMessage] = useState<Message[]>([]);
   const currentMessage = useRef<null | HTMLDivElement>(null);
   const [selectedFile, setSelectedFile] = useState<FileUploadProps | null>(null);
 
-  const CHECK_USERS: SocketEvent = {
+  const CHECK_USER_STATUS: SocketEvent = {
     'action': 'onchat',
     'data': {
       'event': 'CHECK_USER',
@@ -69,15 +59,13 @@ const MessagePage = () => {
       },
     },
   };
-
-  const SEND_MESSAGES: SocketEvent = {
+  const GET_MESSAGES: SocketEvent = {
     'action': 'onchat',
     'data': {
-      'event': 'SEND_CHAT',
+      'event': currentChat.type == 1 ? 'GET_ROOM_CHAT_MES' : 'GET_PEOPLE_CHAT_MES',
       'data': {
-        'type': currentChat.type == 0 ? 'people' : (currentChat.type == 1 ? 'room' : ''),
-        'to': currentChat.name,
-        'mes': message.text,
+        'name': currentChat.name,
+        'page': currentChat.page,
       },
     },
   };
@@ -89,34 +77,54 @@ const MessagePage = () => {
     }
   }, [allMessage]);
 
-  //handle the online status
-  const handleStatusCheck = (evt: MessageEvent) => {
-    const response = JSON.parse(evt.data);
-    if (response.event === 'CHECK_USER' && response.status === 'success') {
-      dispatch(setCurrentChat({ ...currentChat, online: response.data.status }));
-    } else if (response.event === 'CHECK_USER' && response.status === 'error') {
-      toast.error('Error when get status of '.concat(name || 'unknown'), { duration: 2000 });
-    }
-  };
+  //set user status triggers on socket or currentChat changed state
   useEffect(() => {
+    console.log('crigne');
+    //handle the online status
+    const handleStatusCheck = (evt: MessageEvent) => {
+      const response = JSON.parse(evt.data);
+      if (!(response.event === 'CHECK_USER')) return;
+      if (response.status === 'success') {
+        setUserOnline((prev) => {return prev === response.data.status ? prev : response.data.status;});
+      } else if (response.status === 'error') {
+        toast.error('Error when get status of '.concat(name || 'unknown'), { duration: 2000 });
+      }
+    };
+    const handleGetMessage = (evt: MessageEvent) => {
+      const response = JSON.parse(evt.data);
+      if (!(response.event === 'GET_PEOPLE_CHAT_MES' || response.event === 'GET_ROOM_CHAT_MES')) return;
+      console.log(2);
+      if (response.status === 'success') {
+        const messageData: Message[] = response.event === 'GET_ROOM_CHAT_MES' ? response.data.chatData : response.data;
+        setAllMessage((prev) => { return prev === messageData ? prev : messageData;});
+      } else if (response.status === 'error') {
+        toast.error('Error when get chat message of '.concat(name || 'unknown'), { duration: 2000 });
+      }
+    };
+    const handleReceivedNewMessage = (evt: MessageEvent) => {
+      const response = JSON.parse(evt.data);
+      if (!(response.event === 'SEND_CHAT')) return;
+      console.log(3);
+      webSocket.send(JSON.stringify(GET_MESSAGES));
+    };
+
     let interval: NodeJS.Timer;
-    if (currentChat.type != 0) return;
-    if (socketConnection) {
-      console.log("trigger")
-      //check active user
-      socketConnection.addEventListener('message', handleStatusCheck);
+    webSocket.addEventListener('message', handleStatusCheck);
+    webSocket.addEventListener('message', handleGetMessage);
+    webSocket.addEventListener('message', handleReceivedNewMessage);
+    if (webSocket) {
+      webSocket.send(JSON.stringify(GET_MESSAGES));
       interval = setInterval(() => {
-        if (socketConnection.readyState === 1) {
-          socketConnection.send(JSON.stringify(CHECK_USERS));
-        }
+        webSocket.send(JSON.stringify(CHECK_USER_STATUS));
       }, 1000);
     }
     return () => {
-      console.log("detached")
-      socketConnection.removeEventListener('message', handleStatusCheck);
+      webSocket.removeEventListener('message', handleStatusCheck);
+      webSocket.removeEventListener('message', handleGetMessage);
+      webSocket.removeEventListener('message', handleReceivedNewMessage);
       clearInterval(interval);
     };
-  }, [socketConnection, currentChat]);
+  }, [webSocket, currentChat]);
 
   const handleUploadImageVideoOpen = () => {
     setOpenImageVideoUpload(prev => !prev);
@@ -177,12 +185,23 @@ const MessagePage = () => {
 
   //sending time
   const handleSendMessage = (event: FormEvent<HTMLFormElement>) => {
+    const SEND_MESSAGES: SocketEvent = {
+      'action': 'onchat',
+      'data': {
+        'event': 'SEND_CHAT',
+        'data': {
+          'type': currentChat.type == 0 ? 'people' : (currentChat.type == 1 ? 'room' : ''),
+          'to': currentChat.name,
+          'mes': message.text,
+        },
+      },
+    };
     event.preventDefault();
 
+    webSocket.send(JSON.stringify(SEND_MESSAGES));
     if (message.text || message.imageUrl || message.videoUrl) {
-      if (socketConnection) {
-        socketConnection.send(JSON.stringify(SEND_MESSAGES));
-        // dispatch(socketSendMessage());
+      if (webSocket) {
+        webSocket.send(JSON.stringify(GET_MESSAGES));
         setMessage({
           text: '',
           imageUrl: '',
@@ -217,7 +236,7 @@ const MessagePage = () => {
               <h3 className="font-semibold text-lg my-0 text-ellipsis line-clamp-1">{currentChat.name}</h3>
               <p className="-my-2 text-sm">
                 {
-                  currentChat.online ? <span className="text-primary">online</span> :
+                  userOnline ? <span className="text-primary">online</span> :
                     <span className="text-slate-400">offline</span>
                 }
               </p>
@@ -237,18 +256,18 @@ const MessagePage = () => {
 
 
           {/**all messages show here */}
-          <div className="flex flex-col gap-2 py-2 mx-2" ref={currentMessage}>
+          <div className="flex flex-col-reverse gap-2 py-2 mx-2 " ref={currentMessage}>
             {
               allMessage.map((msg, index) => {
                 return (
                   <div
-                    className={'p-1 py-1 rounded w-fit max-w-[280px] md:max-w-sm lg:max-w-md ml-auto bg-teal-100'}>
+                    className={` p-1 py-1 rounded w-fit max-w-[280px] md:max-w-sm lg:max-w-md ${user.username == msg.name ? 'ml-auto bg-teal-100' : 'bg-white'}`}>
 
                     <div className="w-full relative">
 
                     </div>
-                    {/*<p className='px-2'>{msg.text}</p>*/}
-                    {/*<p className='text-xs ml-auto w-fit'>{moment(msg.createdAt).format('hh:mm')}</p>*/}
+                    <p className="px-2">{msg.mes}</p>
+                    <p className="text-xs ml-auto w-fit">{moment(msg.createAt).format('hh:mm')}</p>
                   </div>
                 );
               })
