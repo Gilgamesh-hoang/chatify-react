@@ -13,7 +13,17 @@ export const setupWebSocket = (dispatch: Dispatch) => {
     const data = JSON.parse(event.data);
     if (data.status === 'success') {
       switch (data.event) {
-        case 'LOGIN':
+        case 'RE_LOGIN':
+          const username = localStorage.getItem('userName');
+          if (!username) {
+            message.error('Not found username');
+            localStorage.clear();
+            setTimeout(() => {
+              window.location.href = '/login';
+            }, 200);
+          }
+          localStorage.setItem('token', data.data.RE_LOGIN_CODE);
+          dispatch(setUserName(username!));
           break;
       }
     } else if (data.status === 'error') {

@@ -1,7 +1,7 @@
-import { configureStore, combineReducers } from '@reduxjs/toolkit';
-import userReducer from './userSlice';
-import socketSlice from './socketSlice';
-import websocketMiddleware from './middleware/socketMiddleware';
+import {configureStore, combineReducers} from '@reduxjs/toolkit'
+import userReducer from './userSlice'
+import socketSlice from './socketSlice'
+import websocketMiddleware from './middleware/socketMiddleware'
 import currentChatSlice from '~/redux/currentChatSlice';
 //
 // export interface RootStateType {
@@ -20,17 +20,19 @@ import currentChatSlice from '~/redux/currentChatSlice';
 //         getDefaultMiddleware().concat(websocketMiddleware),
 // });
 const rootReducer = combineReducers({
-  user: userReducer,
-  socket: socketSlice,
+    user: userReducer,
+    socket: socketSlice,
+    currentChat: currentChatSlice,
 });
 
 export const store = configureStore({
-  reducer: {
-    app: rootReducer,
-  },
-  middleware: (getDefaultMiddleware) =>
-    getDefaultMiddleware().concat(websocketMiddleware),
+    reducer: {
+        app: rootReducer,
+    },
+    middleware: (getDefaultMiddleware) =>
+        getDefaultMiddleware().concat(websocketMiddleware),
 });
 
+
 export type RootState = ReturnType<typeof store.getState>;
-export type AppDispatch = typeof store.dispatch;
+export type AppDispatch = typeof store.dispatch

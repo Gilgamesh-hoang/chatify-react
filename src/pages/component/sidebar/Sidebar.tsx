@@ -11,18 +11,18 @@ import NavSideBar from '~/pages/component/NavSideBar';
 import { SocketEvent } from '~/model/SocketEvent';
 import { SideBarProp } from '~/model/SideBarProp';
 import { AppDispatch, RootState } from '~/redux/store';
-import { socketReceivedMessage, socketSendMessage } from '~/redux/socketSlice';
+import {socketReceivedMessage, socketSendMessage} from '~/redux/socketSlice';
 import { useParams } from 'react-router-dom';
 
 const Sidebar = () => {
-  const userName = localStorage.getItem('userName');
+  const {type, name} = useParams();
   const user: UserState = useSelector(userSelector);
+  const userName = user.username;
   const [allUsers, setAllUsers] = useState<SideBarProp[]>([]);
   // const socket = useSelector(socketSelector);
-  const socket: WebSocket | null = useSelector(
-    (state: RootState) => state.app.socket.socket
-  );
-
+  const socket = useSelector(socketSelector);
+  const statusSocket = useSelector(socketStatusSelector);
+  const dispatch = useDispatch<AppDispatch>();
   const getUserParams: SocketEvent = {
     action: 'onchat',
     data: {
@@ -31,12 +31,7 @@ const Sidebar = () => {
   };
 
   useEffect(() => {
-    if (socket) {
-      if (socket.readyState === WebSocket.OPEN) {
-        socket.send(JSON.stringify(getUserParams));
-        console.log('socket is sending message');
-      }
-
+    if (socket && statusSocket == 'open' && userName) {
       socket.onmessage = (event: MessageEvent) => {
         const data = JSON.parse(event.data);
         if (data.event === 'GET_USER_LIST' && data.status === 'success') {
@@ -53,11 +48,13 @@ const Sidebar = () => {
           });
           console.log('conversationUserData', conversationUserData);
           setAllUsers(conversationUserData);
+          // dispatch(socketReceivedMessage());
         }
       };
-    } else console.log('socket is not connected');
-    // eslint-disable-next-line
-  }, [socket]);
+      // socket.send(JSON.stringify(getUserParams))
+      dispatch(socketSendMessage(getUserParams));
+    }
+  }, [socket, userName, statusSocket]);
 
   return (
     <div className="w-full h-full grid grid-cols-[48px,1fr] bg-white">
@@ -75,7 +72,6 @@ const Sidebar = () => {
               Explore users to start a conversation with.
             </p>
           )}
-
           {allUsers.map((user, index) => (
             <SideBarItem key={index} {...user} />
           ))}

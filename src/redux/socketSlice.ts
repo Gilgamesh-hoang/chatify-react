@@ -2,10 +2,7 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 import { userInitState, UserState } from './userSlice';
 import { SocketEvent } from '~/model/SocketEvent';
-<<<<<<< HEAD
-=======
 import { ChatInfo, initCurrentChat } from '~/redux/currentChatSlice';
->>>>>>> 14c2224ed57af2998bb3bbe07675071c5a32d0f9
 export type StatusSocket =
   | 'connecting'
   | 'open'
@@ -23,10 +20,7 @@ export const socketInitState: SocketState = {
   user: userInitState,
   socket: null,
   statusSocket: 'closed',
-<<<<<<< HEAD
-=======
   currentChat: initCurrentChat,
->>>>>>> 14c2224ed57af2998bb3bbe07675071c5a32d0f9
 };
 
 export const socketSlice = createSlice({
