@@ -1,8 +1,8 @@
-import { Reducer, configureStore, combineReducers } from '@reduxjs/toolkit';
-import userReducer, { UserState } from './userSlice';
-import socketSlice, { SocketState } from './socketSlice';
+import { configureStore, combineReducers } from '@reduxjs/toolkit';
+import userReducer from './userSlice';
+import socketSlice from './socketSlice';
 import websocketMiddleware from './middleware/socketMiddleware';
-import partnerSlice from './partnerSlice';
+import currentChatSlice from '~/redux/currentChatSlice';
 //
 // export interface RootStateType {
 //     app : Reducer<SocketState>
@@ -22,7 +22,6 @@ import partnerSlice from './partnerSlice';
 const rootReducer = combineReducers({
   user: userReducer,
   socket: socketSlice,
-  partner: partnerSlice,
 });
 
 export const store = configureStore({

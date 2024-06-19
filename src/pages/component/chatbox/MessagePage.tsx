@@ -1,4 +1,10 @@
-import React, { ChangeEvent, useEffect, useRef, useState } from 'react';
+import React, {
+  ChangeEvent,
+  FormEvent,
+  useEffect,
+  useRef,
+  useState,
+} from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { HiDotsVertical } from 'react-icons/hi';
 import { FaAngleLeft, FaImage, FaPlus, FaVideo } from 'react-icons/fa6';
@@ -9,31 +15,37 @@ import { IoClose } from 'react-icons/io5';
 
 import Avatar from '~/component/Avatar';
 import backgroundImage from '~/assets/wallapaper.jpeg';
-import {
-  partnerSelector,
-  socketSelector,
-  socketStatusSelector,
-  userSelector,
-} from '~/redux/selector';
+import { socketSelector, userSelector } from '~/redux/selector';
 import Loading from '~/component/Loading';
 import uploadFile from '~/helper/uploadFile';
-import { AppDispatch } from '~/redux/store';
-import { socketSendMessage } from '~/redux/socketSlice';
-import { NameSocketEvent, SocketEvent } from '~/model/SocketEvent';
-import { setOnlinePartner, setPartnerUsername } from '~/redux/partnerSlice';
 
 interface FileUploadProps {
   isImage: boolean;
   file: File;
 }
 
+// interface Message {
+//   from: string;
+//   type: 0 | 1;
+//   to: string;
+//   content: string;
+//   createAt: string;
+// }
+
 const MessagePage = () => {
-  const partnerUsername = useParams().id;
-  const socket = useSelector(socketSelector);
-  const statusSocket = useSelector(socketStatusSelector);
+  const token = localStorage.getItem('token') ?? '';
+  const userName = localStorage.getItem('userName') ?? '';
+
+  const socketConnection = useSelector(socketSelector);
   const user = useSelector(userSelector);
-  const dispatch = useDispatch<AppDispatch>();
-  const partner = useSelector(partnerSelector);
+
+  const [dataUser, setDataUser] = useState({
+    name: '',
+    email: '',
+    profile_pic: '',
+    online: false,
+    _id: '',
+  });
   const [openImageVideoUpload, setOpenImageVideoUpload] = useState(false);
   const [message, setMessage] = useState({
     text: '',
@@ -46,28 +58,7 @@ const MessagePage = () => {
   const [selectedFile, setSelectedFile] = useState<FileUploadProps | null>(
     null
   );
-  //   Get partner username
-  useEffect(() => {
-    dispatch(setPartnerUsername(partnerUsername!));
-  }, [useParams()]);
-  //   Check is online or not of user
-  useEffect(() => {
-    checkOnlinePartner();
-  }, [partner.username, statusSocket]);
-  const checkOnlinePartner = () => {
-    if (statusSocket == 'open' && partner.username) {
-      const checkUserParams: SocketEvent = {
-        action: 'onchat',
-        data: {
-          event: 'CHECK_USER',
-          data: {
-            user: partner.username,
-          },
-        },
-      };
-      dispatch(socketSendMessage(checkUserParams));
-    }
-  };
+
   const handleUploadImageVideoOpen = () => {
     setOpenImageVideoUpload((prev) => !prev);
   };
@@ -114,12 +105,7 @@ const MessagePage = () => {
     }
   };
 
-  const handleOnChange = (e: ChangeEvent<HTMLInputElement>) => {
-    setMessage((state) => ({
-      ...state,
-      text: e.target.value,
-    }));
-  };
+  const handleOnChange = () => {};
 
   return (
     <>
@@ -137,16 +123,17 @@ const MessagePage = () => {
               <Avatar
                 width={50}
                 height={50}
-                name={partner.username!}
+                imageUrl={dataUser?.profile_pic}
+                name={dataUser?.name}
                 type={0}
               />
             </div>
             <div>
               <h3 className="font-semibold text-lg my-0 text-ellipsis line-clamp-1">
-                {partner?.username}
+                {dataUser?.name}
               </h3>
               <p className="-my-2 text-sm">
-                {partner.online ? (
+                {dataUser.online ? (
                   <span className="text-primary">online</span>
                 ) : (
                   <span className="text-slate-400">offline</span>

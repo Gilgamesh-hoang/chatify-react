@@ -1,13 +1,22 @@
 import Avatar from '~/component/Avatar';
 import clsx from 'clsx';
-import { NavLink } from 'react-router-dom';
+import {
+  Link,
+  NavLink,
+  useNavigate,
+  useNavigation,
+  useParams,
+} from 'react-router-dom';
 import React, { useEffect, useRef, useState } from 'react';
 import { SideBarProp } from '~/model/SideBarProp';
-import { useSelector } from 'react-redux';
-import { socketSelector, userSelector } from '~/redux/selector';
+import { useDispatch, useSelector } from 'react-redux';
+import {
+  socketSelector,
+  socketStatusSelector,
+  userSelector,
+} from '~/redux/selector';
 import { SocketEvent } from '~/model/SocketEvent';
 import toast, { Toaster } from 'react-hot-toast';
-import { RootState } from '~/redux/store';
 
 interface LastMessage {
   mes: string;
@@ -143,7 +152,7 @@ const SideBarItem: React.FC<SideBarProp> = (props) => {
     <>
       <Toaster position={'top-center'} />
       <NavLink
-        to={`/u/` + props.name}
+        to={``}
         key={props.name}
         onClick={handleSeen}
         className="flex items-center gap-2 py-3 px-2 border border-transparent hover:border-primary rounded hover:bg-slate-100 cursor-pointer"
