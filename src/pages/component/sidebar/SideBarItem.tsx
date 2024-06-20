@@ -84,13 +84,14 @@ const SideBarItem: React.FC<SideBarProp> = (props) => {
 
   // This effect runs when the `socket` or `lastMessage` changes.
   useEffect(() => {
-    let timeout: string | number | NodeJS.Timeout | undefined;
+    let timeout: NodeJS.Timeout;
     if (socket) {
       // Add the 'message' event listener and send the "GET_PEOPLE_CHAT_MES" event after 1 second.
+      socket.addEventListener('message', handleMessage);
       timeout = setTimeout(() => {
-        socket.addEventListener('message', handleMessage);
-        if (socket.readyState == 1)
+        if (socket.readyState == WebSocket.OPEN) {
           socket.send(JSON.stringify(getMessParams));
+        }
       }, 1000);
     }
     // Remove the 'message' event listener when the component unmounts.
@@ -162,8 +163,8 @@ const SideBarItem: React.FC<SideBarProp> = (props) => {
             name={props.name}
           />
         </div>
-        <div>
-          <h3 className={clsx('text-ellipsis line-clamp-1 text-base',
+        <div className={"lg:max-w-[200px]"}>
+          <h3 className={clsx('text-ellipsis line-clamp-1 text-base whitespace-nowrap',
             { 'font-normal': !unseenRef.current },
             { 'font-bold': unseenRef.current })}
           >
@@ -171,15 +172,10 @@ const SideBarItem: React.FC<SideBarProp> = (props) => {
           </h3>
 
           <div className="text-slate-500 text-xs flex items-center gap-1">
-            <p className={clsx('text-ellipsis line-clamp-1 text-gray-950',
-              { 'font-bold': unseenRef.current })}
-            >
               {
                 lastMessage && renderLastMess(lastMessage)
               }
-            </p>
-
-            </div>
+          </div>
 
           </div>
 
@@ -189,9 +185,7 @@ const SideBarItem: React.FC<SideBarProp> = (props) => {
             {lastMessage ? getTime(lastMessage) : ''}
           </p>
           <span className={clsx('w-2 h-2 flex justify-center items-center ml-auto bg-red-600 rounded-full ',
-            { 'invisible': !unseenRef.current })}>
-
-                    </span>
+            { 'invisible': !unseenRef.current })}></span>
           </div>
         </NavLink>
       </>

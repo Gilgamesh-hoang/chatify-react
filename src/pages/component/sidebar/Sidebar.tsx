@@ -53,7 +53,7 @@ const Sidebar = () => {
   }, [socket, userName, statusSocket]);
 
   return (
-      <div className="w-full h-full grid grid-cols-[48px,1fr] bg-white">
+      <div className="w-full h-full grid grid-cols-[48px,1fr] lg:grid-cols-[48px,322px] bg-white">
         <NavSideBar name={user.username} />
 
         <div className="w-full">

@@ -17,7 +17,7 @@ import { initCurrentChat, Message, setCurrentChat } from '~/redux/currentChatSli
 
 import FileUpload from '~/component/FileUpload';
 import FilePreview from '~/component/FilePreview';
-import MessageItem from '~/pages/component/chatbox/MessageItem';
+import MessageItem, { toAscii } from '~/pages/component/chatbox/MessageItem';
 
 
 interface FileUploadProps {
@@ -69,16 +69,16 @@ const MessagePage = () => {
     },
   };
 
-  //when allMessage updates, try to scroll to the newest message
-  useEffect(() => {
-    if (currentMessage.current) {
-      currentMessage.current.scrollIntoView({ behavior: 'smooth', block: 'end' });
-    }
-  }, [allMessage]);
+  //when allMessage updates, try to scroll to the newest message (UNFORTUNATELY, webSocket always send getMessage
+  //which in turns, allMessage always update and the current message starts scroll to end, so bye this function
+  // useEffect(() => {
+  //   if (currentMessage.current) {
+  //     currentMessage.current.scrollIntoView({ behavior: 'smooth', block: 'end' });
+  //   }
+  // }, [allMessage]);
 
   //set user status triggers on socket or currentChat changed state
   useEffect(() => {
-    console.log('crigne');
     //handle the online status
     const handleStatusCheck = (evt: MessageEvent) => {
       const response = JSON.parse(evt.data);
@@ -91,24 +91,37 @@ const MessagePage = () => {
         toast.error('Error when get status of '.concat(name || 'unknown'), { duration: 2000 });
       }
     };
+    //handle the get_message
     const handleGetMessage = (evt: MessageEvent) => {
       const response = JSON.parse(evt.data);
       if (!(response.event === 'GET_PEOPLE_CHAT_MES' || response.event === 'GET_ROOM_CHAT_MES')) return;
-      console.log(2);
       if (response.status === 'success') {
+        //get message data
         const messageData: Message[] = response.event === 'GET_ROOM_CHAT_MES' ? response.data.chatData : response.data;
-        setAllMessage((prev) => {
-          return prev === messageData ? prev : messageData;
-        });
+        //filter it to get the desired chat for user/group
+        let filteredMessages;
+        if (response.event === 'GET_ROOM_CHAT_MES')
+          filteredMessages = response.data.chatData.filter((message:Message) => message.to === currentChat.name)
+        else
+          filteredMessages = response.data.filter((message:Message) => message.name == currentChat.name || message.to === currentChat.name)
+        //and set the preferred chat to the screen
+        if (filteredMessages.length > 0) {
+          setAllMessage(filteredMessages);
+        }
       } else if (response.status === 'error') {
         toast.error('Error when get chat message of '.concat(name || 'unknown'), { duration: 2000 });
       }
     };
+    //handle the success send_chat (aka receiving new message)
     const handleReceivedNewMessage = (evt: MessageEvent) => {
       const response = JSON.parse(evt.data);
       if (!(response.event === 'SEND_CHAT')) return;
-      console.log(3);
-      webSocket.send(JSON.stringify(GET_MESSAGES));
+      //call get message to update
+      //just in case socket is in connecting state
+      if (webSocket.readyState === WebSocket.OPEN)
+        webSocket.send(JSON.stringify(GET_MESSAGES));
+      //only when get new message, should the message scroll to end
+      currentMessage.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
     };
 
     let interval: NodeJS.Timer;
@@ -116,12 +129,17 @@ const MessagePage = () => {
     webSocket.addEventListener('message', handleGetMessage);
     webSocket.addEventListener('message', handleReceivedNewMessage);
     if (webSocket) {
-      webSocket.send(JSON.stringify(GET_MESSAGES));
+      //just in case socket is in connecting state
+      if (webSocket.readyState === WebSocket.OPEN)
+        webSocket.send(JSON.stringify(GET_MESSAGES));
       interval = setInterval(() => {
-        webSocket.send(JSON.stringify(CHECK_USER_STATUS));
+        //just in case socket is in connecting state
+        if (webSocket.readyState === WebSocket.OPEN)
+          webSocket.send(JSON.stringify(CHECK_USER_STATUS));
       }, 1000);
     }
     return () => {
+      //clean up on detach
       webSocket.removeEventListener('message', handleStatusCheck);
       webSocket.removeEventListener('message', handleGetMessage);
       webSocket.removeEventListener('message', handleReceivedNewMessage);
@@ -174,21 +192,28 @@ const MessagePage = () => {
         const url = await handleUploadFile();
         if (url) {
           const SEND_FILE: SocketEvent = createSocketEvent(url);
-          webSocket.send(JSON.stringify(SEND_FILE));
+          //just in case socket is in connecting state
+          if (webSocket.readyState === WebSocket.OPEN)
+            webSocket.send(JSON.stringify(SEND_FILE));
         }
-
       }
 
       // If there is an input value
       if (inputValue) {
-        // Send a socket event with the input value
-        const SEND_MESSAGES: SocketEvent = createSocketEvent(inputValue);
-        webSocket.send(JSON.stringify(SEND_MESSAGES));
+        // Send a socket event with the input value (converted one to ascii)
+        const SEND_MESSAGES: SocketEvent = createSocketEvent(toAscii(inputValue));
+        //just in case socket is in connecting state
+        if (webSocket.readyState === WebSocket.OPEN)
+          webSocket.send(JSON.stringify(SEND_MESSAGES));
         // Clear the input field
         inputRef.current && (inputRef.current.value = '');
       }
       // Request the latest messages
-      webSocket.send(JSON.stringify(GET_MESSAGES));
+      //just in case socket is in connecting state
+      if (webSocket.readyState === WebSocket.OPEN)
+        webSocket.send(JSON.stringify(GET_MESSAGES));
+      // And scroll the view to bottom to ensure that message is there
+      currentMessage.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
     }
   };
 
@@ -238,7 +263,7 @@ const MessagePage = () => {
 
 
           {/**all messages show here */}
-          <div className="flex flex-col-reverse gap-2 py-2 mx-2 ">
+          <div className="flex flex-col-reverse gap-2 py-2 mx-2 " ref={currentMessage}>
             {
               allMessage.map((msg: Message, index: number) =>
                 <MessageItem key={index} msg={msg} username={user.username} />,
