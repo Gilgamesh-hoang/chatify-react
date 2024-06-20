@@ -1,66 +1,53 @@
-import React, { ChangeEvent, FormEvent, useEffect, useRef, useState } from 'react';
+import React, { FormEvent, useEffect, useRef, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { HiDotsVertical } from 'react-icons/hi';
-import { FaAngleLeft, FaImage, FaPlus, FaVideo } from 'react-icons/fa6';
+import { FaAngleLeft, FaPlus } from 'react-icons/fa6';
 import { IoMdSend } from 'react-icons/io';
 import toast, { Toaster } from 'react-hot-toast';
-import { Link, useLocation, useParams } from 'react-router-dom';
-import { IoClose } from 'react-icons/io5';
+import { Link, useParams } from 'react-router-dom';
 
 import Avatar from '~/component/Avatar';
 import backgroundImage from '~/assets/wallapaper.jpeg';
 import { currentChatSelector, socketSelector, socketStatusSelector, userSelector } from '~/redux/selector';
 import Loading from '~/component/Loading';
 import uploadFile from '~/helper/uploadFile';
-import { MessagePageProps } from '~/model/MessagePageProps';
 import { SocketEvent } from '~/model/SocketEvent';
-import { socketSendMessage } from '~/redux/socketSlice';
 import { AppDispatch } from '~/redux/store';
-import { resetComponent } from 'antd/es/style';
-import useForceUpdate from 'antd/es/_util/hooks/useForceUpdate';
-import { setCurrentChat } from '~/redux/currentChatSlice';
+import { initCurrentChat, Message, setCurrentChat } from '~/redux/currentChatSlice';
+import moment from 'moment';
+import FileUpload from '~/component/FileUpload';
+import FilePreview from '~/component/FilePreview';
 
 interface FileUploadProps {
   isImage: boolean;
   file: File;
 }
 
-// interface Message {
-//   from: string;
-//   type: 0 | 1;
-//   to: string;
-//   content: string;
-//   createAt: string;
-// }
-
 const MessagePage = () => {
-  //all selector
-  const user = useSelector(userSelector);
-  const socketConnection = useSelector(socketSelector);
-  const currentChat = useSelector(currentChatSelector);
-  const statusSocket = useSelector(socketStatusSelector);
-
   //try to set current chat
   const { type, name } = useParams();
   const dispatch = useDispatch<AppDispatch>();
   dispatch(setCurrentChat({
-    ...currentChat,
+    ...initCurrentChat,
     'type': type ? parseInt(type) : -1,
     'name': name || '',
   }));
 
+  //all selector
+  const user = useSelector(userSelector);
+  const webSocket = useSelector(socketSelector);
+  const currentChat = useSelector(currentChatSelector);
+  const statusSocket = useSelector(socketStatusSelector);
+
+  const [userOnline, setUserOnline] = useState<boolean>(false);
   const [openImageVideoUpload, setOpenImageVideoUpload] = useState(false);
-  const [message, setMessage] = useState({
-    text: '',
-    imageUrl: '',
-    videoUrl: '',
-  });
   const [loading, setLoading] = useState(false);
-  const [allMessage, setAllMessage] = useState([]);
+  const [allMessage, setAllMessage] = useState<Message[]>([]);
   const currentMessage = useRef<null | HTMLDivElement>(null);
   const [selectedFile, setSelectedFile] = useState<FileUploadProps | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
-  const CHECK_USERS: SocketEvent = {
+  const CHECK_USER_STATUS: SocketEvent = {
     'action': 'onchat',
     'data': {
       'event': 'CHECK_USER',
@@ -69,15 +56,13 @@ const MessagePage = () => {
       },
     },
   };
-
-  const SEND_MESSAGES: SocketEvent = {
+  const GET_MESSAGES: SocketEvent = {
     'action': 'onchat',
     'data': {
-      'event': 'SEND_CHAT',
+      'event': currentChat.type == 1 ? 'GET_ROOM_CHAT_MES' : 'GET_PEOPLE_CHAT_MES',
       'data': {
-        'type': currentChat.type == 0 ? 'people' : (currentChat.type == 1 ? 'room' : ''),
-        'to': currentChat.name,
-        'mes': message.text,
+        'name': currentChat.name,
+        'page': currentChat.page,
       },
     },
   };
@@ -89,108 +74,119 @@ const MessagePage = () => {
     }
   }, [allMessage]);
 
-  //handle the online status
-  const handleStatusCheck = (evt: MessageEvent) => {
-    const response = JSON.parse(evt.data);
-    if (response.event === 'CHECK_USER' && response.status === 'success') {
-      dispatch(setCurrentChat({ ...currentChat, online: response.data.status }));
-    } else if (response.event === 'CHECK_USER' && response.status === 'error') {
-      toast.error('Error when get status of '.concat(name || 'unknown'), { duration: 2000 });
-    }
-  };
+  //set user status triggers on socket or currentChat changed state
   useEffect(() => {
+    console.log('crigne');
+    //handle the online status
+    const handleStatusCheck = (evt: MessageEvent) => {
+      const response = JSON.parse(evt.data);
+      if (!(response.event === 'CHECK_USER')) return;
+      if (response.status === 'success') {
+        setUserOnline((prev) => {
+          return prev === response.data.status ? prev : response.data.status;
+        });
+      } else if (response.status === 'error') {
+        toast.error('Error when get status of '.concat(name || 'unknown'), { duration: 2000 });
+      }
+    };
+    const handleGetMessage = (evt: MessageEvent) => {
+      const response = JSON.parse(evt.data);
+      if (!(response.event === 'GET_PEOPLE_CHAT_MES' || response.event === 'GET_ROOM_CHAT_MES')) return;
+      console.log(2);
+      if (response.status === 'success') {
+        const messageData: Message[] = response.event === 'GET_ROOM_CHAT_MES' ? response.data.chatData : response.data;
+        setAllMessage((prev) => {
+          return prev === messageData ? prev : messageData;
+        });
+      } else if (response.status === 'error') {
+        toast.error('Error when get chat message of '.concat(name || 'unknown'), { duration: 2000 });
+      }
+    };
+    const handleReceivedNewMessage = (evt: MessageEvent) => {
+      const response = JSON.parse(evt.data);
+      if (!(response.event === 'SEND_CHAT')) return;
+      console.log(3);
+      webSocket.send(JSON.stringify(GET_MESSAGES));
+    };
+
     let interval: NodeJS.Timer;
-    if (currentChat.type != 0) return;
-    if (socketConnection) {
-      console.log("trigger")
-      //check active user
-      socketConnection.addEventListener('message', handleStatusCheck);
+    webSocket.addEventListener('message', handleStatusCheck);
+    webSocket.addEventListener('message', handleGetMessage);
+    webSocket.addEventListener('message', handleReceivedNewMessage);
+    if (webSocket) {
+      webSocket.send(JSON.stringify(GET_MESSAGES));
       interval = setInterval(() => {
-        if (socketConnection.readyState === 1) {
-          socketConnection.send(JSON.stringify(CHECK_USERS));
-        }
+        webSocket.send(JSON.stringify(CHECK_USER_STATUS));
       }, 1000);
     }
     return () => {
-      console.log("detached")
-      socketConnection.removeEventListener('message', handleStatusCheck);
+      webSocket.removeEventListener('message', handleStatusCheck);
+      webSocket.removeEventListener('message', handleGetMessage);
+      webSocket.removeEventListener('message', handleReceivedNewMessage);
       clearInterval(interval);
     };
-  }, [socketConnection, currentChat]);
+  }, [webSocket, currentChat]);
 
   const handleUploadImageVideoOpen = () => {
     setOpenImageVideoUpload(prev => !prev);
   };
 
-  const handleShowImg = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
 
-    // get the file type
-    const fileType = file.type.split('/')[0];
-    if (fileType === 'image') {
-      setSelectedFile({ isImage: true, file: file });
-      setOpenImageVideoUpload(false);
-    } else {
-      toast.error('Chỉ chọn hình ảnh', {
-        duration: 3000,
-      });
-    }
-  };
-
-  const handleShowVideo = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    // get the file type
-    const fileType = file.type.split('/')[0];
-    if (fileType === 'video') {
-      setSelectedFile({ isImage: false, file: file });
-      setOpenImageVideoUpload(false);
-    } else {
-      toast.error('Chỉ chọn video', {
-        duration: 3000,
-      });
-    }
-  };
-
-  const handleUploadFile = async () => {
+  const handleUploadFile = async (): Promise<string | null> => {
     if (selectedFile) {
+      // Set loading state to true to indicate that the file is being uploaded
       setLoading(true);
+      // Call the uploadFile function to upload the selected file and get the URL
       const url = await uploadFile(selectedFile.file);
-      //example: https://res.cloudinary.com/dvh2rphf4/image/upload/v1717753457/chatify/backiee-118342_ptwzp8.jpg
+      // Reset the selected file to null after the upload is complete
       setSelectedFile(null);
       setLoading(false);
+      return url;
     }
+    return null;
   };
 
-  //onChange
-  const handleOnChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = event.target;
-    setMessage(prev => {
-      return {
-        ...prev,
-        text: value,
-      };
-    });
-  };
-
-  //sending time
-  const handleSendMessage = (event: FormEvent<HTMLFormElement>) => {
+  const handleSendMessage = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    // Get the value from the input field
+    const inputValue = inputRef.current?.value;
 
-    if (message.text || message.imageUrl || message.videoUrl) {
-      if (socketConnection) {
-        socketConnection.send(JSON.stringify(SEND_MESSAGES));
-        // dispatch(socketSendMessage());
-        setMessage({
-          text: '',
-          imageUrl: '',
-          videoUrl: '',
-        });
+    const createSocketEvent = (message: string): SocketEvent => ({
+      'action': 'onchat',
+      'data': {
+        'event': 'SEND_CHAT',
+        'data': {
+          'type': currentChat.type == 0 ? 'people' : (currentChat.type == 1 ? 'room' : ''),
+          'to': currentChat.name,
+          'mes': message,
+        },
+      },
+    });
+
+    // If there is an input value or a selected file and the WebSocket is connected
+    if ((inputValue || selectedFile) && webSocket) {
+      if (selectedFile) {
+        // Upload the file and get the URL
+        const url = await handleUploadFile();
+        if (url) {
+          const SEND_FILE: SocketEvent = createSocketEvent(url);
+          webSocket.send(JSON.stringify(SEND_FILE));
+        }
       }
+
+      // If there is an input value
+      if (inputValue) {
+        // Send a socket event with the input value
+        const SEND_MESSAGES: SocketEvent = createSocketEvent(inputValue);
+        webSocket.send(JSON.stringify(SEND_MESSAGES));
+        // Clear the input field
+        inputRef.current.value = '';
+      }
+      // Request the latest messages
+      webSocket.send(JSON.stringify(GET_MESSAGES));
     }
   };
+
 
   return (
     <>
@@ -217,7 +213,7 @@ const MessagePage = () => {
               <h3 className="font-semibold text-lg my-0 text-ellipsis line-clamp-1">{currentChat.name}</h3>
               <p className="-my-2 text-sm">
                 {
-                  currentChat.online ? <span className="text-primary">online</span> :
+                  userOnline ? <span className="text-primary">online</span> :
                     <span className="text-slate-400">offline</span>
                 }
               </p>
@@ -237,18 +233,18 @@ const MessagePage = () => {
 
 
           {/**all messages show here */}
-          <div className="flex flex-col gap-2 py-2 mx-2" ref={currentMessage}>
+          <div className="flex flex-col-reverse gap-2 py-2 mx-2 " ref={currentMessage}>
             {
               allMessage.map((msg, index) => {
                 return (
                   <div
-                    className={'p-1 py-1 rounded w-fit max-w-[280px] md:max-w-sm lg:max-w-md ml-auto bg-teal-100'}>
+                    className={` p-1 py-1 rounded w-fit max-w-[280px] md:max-w-sm lg:max-w-md ${user.username == msg.name ? 'ml-auto bg-teal-100' : 'bg-white'}`}>
 
                     <div className="w-full relative">
 
                     </div>
-                    {/*<p className='px-2'>{msg.text}</p>*/}
-                    {/*<p className='text-xs ml-auto w-fit'>{moment(msg.createdAt).format('hh:mm')}</p>*/}
+                    <p className="px-2">{msg.mes}</p>
+                    <p className="text-xs ml-auto w-fit">{moment(msg.createAt).format('hh:mm')}</p>
                   </div>
                 );
               })
@@ -257,45 +253,7 @@ const MessagePage = () => {
 
 
           {/**upload Image display */}
-          {
-            selectedFile && selectedFile.isImage && (
-              <div
-                className="w-full h-full sticky bottom-0 bg-slate-700 bg-opacity-30 flex justify-center items-center rounded overflow-hidden">
-                <div className="w-fit p-2 absolute top-0 right-0 cursor-pointer hover:text-red-600"
-                     onClick={() => setSelectedFile(null)}>
-                  <IoClose size={30} />
-                </div>
-                <div className="bg-white p-3">
-                  <img
-                    src={URL.createObjectURL(selectedFile.file)}
-                    alt="uploadImage"
-                    className="aspect-square w-full h-full max-w-sm m-2 object-scale-down"
-                  />
-                </div>
-              </div>
-            )
-          }
-
-          {/**upload video display */}
-          {
-            selectedFile && !selectedFile.isImage && (
-              <div
-                className="w-full h-full sticky bottom-0 bg-slate-700 bg-opacity-30 flex justify-center items-center rounded overflow-hidden">
-                <div className="w-fit p-2 absolute top-0 right-0 cursor-pointer hover:text-red-600">
-                  <IoClose size={30} onClick={() => setSelectedFile(null)} />
-                </div>
-                <div className="bg-white p-3">
-                  <video
-                    src={URL.createObjectURL(selectedFile.file)}
-                    className="aspect-square w-full h-full max-w-sm m-2 object-scale-down"
-                    controls
-                    muted
-                    autoPlay
-                  />
-                </div>
-              </div>
-            )
-          }
+          {selectedFile && <FilePreview selectedFile={selectedFile} setSelectedFile={setSelectedFile} />}
 
           {
             loading && (
@@ -317,40 +275,7 @@ const MessagePage = () => {
             {/**video and image */}
             {
               openImageVideoUpload && (
-                <div className="bg-white shadow rounded absolute bottom-14 w-36 p-2">
-                  <form>
-                    <label htmlFor="uploadImage"
-                           className="flex items-center p-2 px-3 gap-3 hover:bg-slate-200 cursor-pointer">
-                      <div className="text-primary">
-                        <FaImage size={18} />
-                      </div>
-                      <p>Image</p>
-                    </label>
-                    <label htmlFor="uploadVideo"
-                           className="flex items-center p-2 px-3 gap-3 hover:bg-slate-200 cursor-pointer">
-                      <div className="text-purple-500">
-                        <FaVideo size={18} />
-                      </div>
-                      <p>Video</p>
-                    </label>
-
-                    <input
-                      type="file"
-                      accept=".jpg,.jpeg,.png,.gif,.bmp"
-                      id="uploadImage"
-                      className="hidden"
-                      onChange={handleShowImg}
-                    />
-
-                    <input
-                      type="file"
-                      accept=".mp4,.avi,.mov,.wmv,.mkv"
-                      id="uploadVideo"
-                      className="hidden"
-                      onChange={handleShowVideo}
-                    />
-                  </form>
-                </div>
+                <FileUpload setSelectedFile={setSelectedFile} setOpenImageVideoUpload={setOpenImageVideoUpload} />
               )
             }
 
@@ -362,10 +287,9 @@ const MessagePage = () => {
               type="text"
               placeholder="Type here message..."
               className="py-1 px-4 outline-none w-full h-full"
-              value={message.text}
-              onChange={handleOnChange}
+              ref={inputRef}
             />
-            <button type="submit" className="text-primary hover:text-secondary" onClick={handleUploadFile}>
+            <button type="submit" className="text-primary hover:text-secondary">
               <IoMdSend size={28} />
             </button>
           </form>
