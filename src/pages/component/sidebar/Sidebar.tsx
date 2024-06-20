@@ -1,20 +1,17 @@
-import React, { useEffect, useState } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
-import {
-  socketSelector,
-  socketStatusSelector,
-  userSelector,
-} from '~/redux/selector';
-import { UserState } from '~/redux/userSlice';
-import { SideBarItem } from '~/pages/component/sidebar';
+import React, {useEffect, useState} from 'react';
+import {useDispatch, useSelector} from 'react-redux';
+import {socketSelector, socketStatusSelector, userSelector,} from '~/redux/selector';
+import {UserState} from '~/redux/userSlice';
+import {SideBarItem} from '~/pages/component/sidebar';
 import NavSideBar from '~/pages/component/NavSideBar';
-import { SocketEvent } from '~/model/SocketEvent';
-import { SideBarProp } from '~/model/SideBarProp';
-import { AppDispatch, RootState } from '~/redux/store';
-import {socketReceivedMessage, socketSendMessage} from '~/redux/socketSlice';
-import { useParams } from 'react-router-dom';
+import {SocketEvent} from '~/model/SocketEvent';
+import {SideBarProp} from '~/model/SideBarProp';
+import {AppDispatch} from '~/redux/store';
+import {socketSendMessage} from '~/redux/socketSlice';
+import {useParams} from 'react-router-dom';
 
 const Sidebar = () => {
+  const {type, name} = useParams();
   const user: UserState = useSelector(userSelector);
   const userName = user.username;
   const [allUsers, setAllUsers] = useState<SideBarProp[]>([]);
@@ -33,14 +30,6 @@ const Sidebar = () => {
     if (socket && statusSocket == 'open' && userName) {
       socket.onmessage = (event: MessageEvent) => {
         const data = JSON.parse(event.data);
-
-        //on received new message, reload this sidebar to update
-        if (data.event === 'SEND_CHAT' && data.status === 'success') {
-          dispatch(socketSendMessage(getUserParams));
-          return;
-        }
-
-        //on retrieve user list success
         if (data.event === 'GET_USER_LIST' && data.status === 'success') {
           const conversationUserData = data.data.filter((conv: any) => {
             if (conv.name != userName) {
@@ -48,17 +37,15 @@ const Sidebar = () => {
                 type: conv.type,
                 name: conv.name,
                 unseen: false,
-                actionTime: conv.actionTime,
+                actionTime: new Date(),
               };
               return sideBarProp;
             }
-            return null;
           });
           console.log('conversationUserData', conversationUserData);
           setAllUsers(conversationUserData);
           // dispatch(socketReceivedMessage());
         }
-
       };
       // socket.send(JSON.stringify(getUserParams))
       dispatch(socketSendMessage(getUserParams));
@@ -66,28 +53,27 @@ const Sidebar = () => {
   }, [socket, userName, statusSocket]);
 
   return (
-    <div className="w-full h-full grid grid-cols-[48px,1fr] bg-white z-30">
-      <NavSideBar name={user.username} />
+      <div className="w-full h-full grid grid-cols-[48px,1fr] bg-white">
+        <NavSideBar name={user.username} />
 
-      <div className="w-full">
-        <div className="h-16 flex items-center py-0.5">
-          <h2 className="text-xl font-bold p-4 text-slate-800 ">Message</h2>
-        </div>
+        <div className="w-full">
+          <div className="h-16 flex items-center py-0.5">
+            <h2 className="text-xl font-bold p-4 text-slate-800 ">Message</h2>
+          </div>
+          <div className="bg-slate-200 p-[0.5px] mt-1"></div>
 
-        <div className="bg-slate-200 p-[0.5px] mt-1"></div>
-
-        <div className="w-auto h-[calc(100vh-65px)] overflow-x-hidden overflow-y-auto scrollbar">
-          {allUsers.length === 0 && (
-            <p className="text-lg text-center text-slate-400 pt-5">
-              Explore users to start a conversation with.
-            </p>
-          )}
-          {allUsers.map((user, index) => (
-            <SideBarItem key={index} {...user} />
-          ))}
+          <div className="h-[calc(100vh-65px)] overflow-x-hidden overflow-y-auto scrollbar">
+            {allUsers.length === 0 && (
+                <p className="text-lg text-center text-slate-400 pt-5">
+                  Explore users to start a conversation with.
+                </p>
+            )}
+            {allUsers.map((user, index) => (
+                <SideBarItem key={index} {...user} />
+            ))}
+          </div>
         </div>
       </div>
-    </div>
   );
 };
 
