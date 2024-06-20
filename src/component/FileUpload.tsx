@@ -9,6 +9,8 @@ interface FileUploadProps {
 
 const FileUpload: React.FC<FileUploadProps> = ({ setSelectedFile, setOpenImageVideoUpload }) => {
 
+  console.log('FileUpload');
+
   const handleFileSelection = async (e: React.ChangeEvent<HTMLInputElement>, isImage: boolean) => {
     const file = e.target.files?.[0];
     if (!file) return;
