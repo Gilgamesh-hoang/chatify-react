@@ -14,9 +14,11 @@ import uploadFile from '~/helper/uploadFile';
 import { SocketEvent } from '~/model/SocketEvent';
 import { AppDispatch } from '~/redux/store';
 import { initCurrentChat, Message, setCurrentChat } from '~/redux/currentChatSlice';
-import moment from 'moment';
+
 import FileUpload from '~/component/FileUpload';
 import FilePreview from '~/component/FilePreview';
+import MessageItem from '~/pages/component/chatbox/MessageItem';
+
 
 interface FileUploadProps {
   isImage: boolean;
@@ -149,7 +151,9 @@ const MessagePage = () => {
   const handleSendMessage = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     // Get the value from the input field
-    const inputValue = inputRef.current?.value;
+
+    const inputValue = inputRef.current?.value.trim();
+
 
     const createSocketEvent = (message: string): SocketEvent => ({
       'action': 'onchat',
@@ -172,6 +176,7 @@ const MessagePage = () => {
           const SEND_FILE: SocketEvent = createSocketEvent(url);
           webSocket.send(JSON.stringify(SEND_FILE));
         }
+
       }
 
       // If there is an input value
@@ -180,7 +185,7 @@ const MessagePage = () => {
         const SEND_MESSAGES: SocketEvent = createSocketEvent(inputValue);
         webSocket.send(JSON.stringify(SEND_MESSAGES));
         // Clear the input field
-        inputRef.current.value = '';
+        inputRef.current && (inputRef.current.value = '');
       }
       // Request the latest messages
       webSocket.send(JSON.stringify(GET_MESSAGES));
@@ -233,21 +238,11 @@ const MessagePage = () => {
 
 
           {/**all messages show here */}
-          <div className="flex flex-col-reverse gap-2 py-2 mx-2 " ref={currentMessage}>
+          <div className="flex flex-col-reverse gap-2 py-2 mx-2 ">
             {
-              allMessage.map((msg, index) => {
-                return (
-                  <div
-                    className={` p-1 py-1 rounded w-fit max-w-[280px] md:max-w-sm lg:max-w-md ${user.username == msg.name ? 'ml-auto bg-teal-100' : 'bg-white'}`}>
-
-                    <div className="w-full relative">
-
-                    </div>
-                    <p className="px-2">{msg.mes}</p>
-                    <p className="text-xs ml-auto w-fit">{moment(msg.createAt).format('hh:mm')}</p>
-                  </div>
-                );
-              })
+              allMessage.map((msg: Message, index: number) =>
+                <MessageItem key={index} msg={msg} username={user.username} />,
+              )
             }
           </div>
 

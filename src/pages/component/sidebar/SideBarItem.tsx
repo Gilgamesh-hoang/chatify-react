@@ -1,12 +1,16 @@
 import Avatar from '~/component/Avatar';
 import clsx from 'clsx';
-import {NavLink, useParams} from 'react-router-dom';
-import React, {useEffect, useRef, useState} from 'react';
-import {SideBarProp} from '~/model/SideBarProp';
-import {useSelector} from 'react-redux';
-import {socketSelector, userSelector} from '~/redux/selector';
-import {SocketEvent} from '~/model/SocketEvent';
-import toast, {Toaster} from 'react-hot-toast';
+
+import { NavLink, useParams } from 'react-router-dom';
+import React, { useEffect, useRef, useState } from 'react';
+import { SideBarProp } from '~/model/SideBarProp';
+import { useSelector } from 'react-redux';
+import { socketSelector, userSelector } from '~/redux/selector';
+import { SocketEvent } from '~/model/SocketEvent';
+import toast, { Toaster } from 'react-hot-toast';
+import { isCloudinaryURL, isValidURL } from '~/utils/linkUtil';
+import { CiImageOn, CiVideoOn } from 'react-icons/ci';
+
 
 
 interface LastMessage {
@@ -27,7 +31,9 @@ const SideBarItem: React.FC<SideBarProp> = (props) => {
   const [lastMessage, setLastMessage] = useState<LastMessage | null>(null);
 
   const unseenRef = useRef<boolean>(
-      JSON.parse(localStorage.getItem(`unseen_${props.name}`) || 'false'));
+
+    JSON.parse(localStorage.getItem(`unseen_${props.name}`) || 'false'));
+
 
   // const [unseen, setUnseen] = useState<boolean>(unseenRef.current);
 
@@ -122,48 +128,69 @@ const SideBarItem: React.FC<SideBarProp> = (props) => {
     // setUnseen(false);
   };
 
-  return (
-      <>
-        <Toaster position={'top-center'} />
-        <NavLink to={`/${props.type}/${props.name}`} key={props.name}
-                 onClick={handleSeen}
-                 className=
-                     {clsx('flex items-center gap-2 py-3 px-2 border border-transparent hover:border-primary rounded hover:bg-slate-100 cursor-pointer',
-                         props.name == name ? 'bg-slate-200 ' : '')}>
-          <div>
-            <Avatar
-                type={props.type}
-                width={40}
-                height={40}
-                name={props.name}
-            />
-          </div>
-          <div>
-            <h3 className={clsx('text-ellipsis line-clamp-1 text-base',
-                { 'font-normal': !unseenRef.current },
-                { 'font-bold': unseenRef.current })}
-            >
-              {props.name}
-            </h3>
+  const renderLastMess = (lastMessage: LastMessage) => {
+    const isURL = isValidURL(lastMessage.mes);
+    const cloudinaryURL = isURL ? isCloudinaryURL(lastMessage.mes) : null;
+    const isImage = cloudinaryURL?.isImage;
+    const isVideo = cloudinaryURL?.isVideo;
+    const sender = lastMessage.name === userName ? 'You: ' : '';
+    const message = isURL ? (isImage ? 'Send image ' : isVideo ? 'Send video ' : lastMessage.mes) : lastMessage.mes;
 
-            <div className="text-slate-500 text-xs flex items-center gap-1">
-              <p className={clsx('text-ellipsis line-clamp-1 text-gray-950',
-                  { 'font-bold': unseenRef.current })}
-              >
-                {
-                  lastMessage ? (lastMessage.name === userName ? 'You: ' : '') + lastMessage.mes : ''
-                }
-              </p>
+    return (
+      <p className={clsx('text-ellipsis line-clamp-1 text-gray-950', { 'font-bold': unseenRef.current })}>
+        <span>{sender + message}</span>
+        {isImage && <CiImageOn className='ml-1 size-4 inline'/>}
+        {isVideo && <CiVideoOn className='ml-1 size-4 inline'/>}
+      </p>
+    );
+  };
+
+  return (
+
+    <>
+      <Toaster position={'top-center'} />
+      <NavLink to={`/${props.type}/${props.name}`} key={props.name}
+               onClick={handleSeen}
+               className=
+                 {clsx('flex items-center gap-2 py-3 px-2 border border-transparent hover:border-primary rounded hover:bg-slate-100 cursor-pointer',
+                   props.name == name ? 'bg-slate-200 ' : '')}>
+        <div>
+          <Avatar
+            type={props.type}
+            width={40}
+            height={40}
+            name={props.name}
+          />
+        </div>
+        <div>
+          <h3 className={clsx('text-ellipsis line-clamp-1 text-base',
+            { 'font-normal': !unseenRef.current },
+            { 'font-bold': unseenRef.current })}
+          >
+            {props.name}
+          </h3>
+
+          <div className="text-slate-500 text-xs flex items-center gap-1">
+            <p className={clsx('text-ellipsis line-clamp-1 text-gray-950',
+              { 'font-bold': unseenRef.current })}
+            >
+              {
+                lastMessage && renderLastMess(lastMessage)
+              }
+            </p>
+
             </div>
 
           </div>
 
-          <div className="flex flex-col ml-auto">
-            <p className="text-xs mb-1.5 font-normal w-max text-right">
-              {lastMessage ? getTime(lastMessage) : ''}
-            </p>
-            <span className={clsx('w-2 h-2 flex justify-center items-center ml-auto bg-red-600 rounded-full ',
-                { 'invisible': !unseenRef.current })}>
+
+        <div className="flex flex-col ml-auto">
+          <p className="text-xs mb-1.5 font-normal w-max text-right">
+            {lastMessage ? getTime(lastMessage) : ''}
+          </p>
+          <span className={clsx('w-2 h-2 flex justify-center items-center ml-auto bg-red-600 rounded-full ',
+            { 'invisible': !unseenRef.current })}>
+
                     </span>
           </div>
         </NavLink>

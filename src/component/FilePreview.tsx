@@ -7,6 +7,7 @@ interface FilePreviewProps {
 }
 
 const FilePreview: React.FC<FilePreviewProps> = ({ selectedFile, setSelectedFile }) => {
+
   if (!selectedFile) return null;
 
   const handleClose = () => {
