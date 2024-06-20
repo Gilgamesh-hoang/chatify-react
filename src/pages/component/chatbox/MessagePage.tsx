@@ -14,9 +14,11 @@ import uploadFile from '~/helper/uploadFile';
 import { SocketEvent } from '~/model/SocketEvent';
 import { AppDispatch } from '~/redux/store';
 import { initCurrentChat, Message, setCurrentChat } from '~/redux/currentChatSlice';
+
 import FileUpload from '~/component/FileUpload';
 import FilePreview from '~/component/FilePreview';
 import MessageItem from '~/pages/component/chatbox/MessageItem';
+
 
 interface FileUploadProps {
   isImage: boolean;
@@ -149,7 +151,9 @@ const MessagePage = () => {
   const handleSendMessage = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     // Get the value from the input field
+
     const inputValue = inputRef.current?.value.trim();
+
 
     const createSocketEvent = (message: string): SocketEvent => ({
       'action': 'onchat',
@@ -172,6 +176,7 @@ const MessagePage = () => {
           const SEND_FILE: SocketEvent = createSocketEvent(url);
           webSocket.send(JSON.stringify(SEND_FILE));
         }
+
       }
 
       // If there is an input value

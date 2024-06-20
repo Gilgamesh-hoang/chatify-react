@@ -1,5 +1,6 @@
 import Avatar from '~/component/Avatar';
 import clsx from 'clsx';
+
 import { NavLink, useParams } from 'react-router-dom';
 import React, { useEffect, useRef, useState } from 'react';
 import { SideBarProp } from '~/model/SideBarProp';
@@ -9,6 +10,7 @@ import { SocketEvent } from '~/model/SocketEvent';
 import toast, { Toaster } from 'react-hot-toast';
 import { isCloudinaryURL, isValidURL } from '~/utils/linkUtil';
 import { CiImageOn, CiVideoOn } from 'react-icons/ci';
+
 
 
 interface LastMessage {
@@ -29,7 +31,9 @@ const SideBarItem: React.FC<SideBarProp> = (props) => {
   const [lastMessage, setLastMessage] = useState<LastMessage | null>(null);
 
   const unseenRef = useRef<boolean>(
+
     JSON.parse(localStorage.getItem(`unseen_${props.name}`) || 'false'));
+
 
   // const [unseen, setUnseen] = useState<boolean>(unseenRef.current);
 
@@ -104,17 +108,17 @@ const SideBarItem: React.FC<SideBarProp> = (props) => {
     const sameYear = message.createAt.getFullYear() === currentDate.getFullYear();
 
     return sameDay
-      // ...and if the current hour and the action time's hour are the same...
-      ? currentDate.getHours() - TIMEZONE_OFFSET - message.createAt.getHours() === 0
-        // ...then set 'time' to the difference in minutes between the current time and the action time,
-        ? (currentDate.getMinutes() - message.createAt.getMinutes()) + ' min'
-        // ...otherwise, set 'time' to the difference in hours between the current time and the action time,
-        : (currentDate.getHours() - TIMEZONE_OFFSET - message.createAt.getHours()) + ' hour'
-      : sameYear
-        //set 'time' to the action time's date and month.
-        ? message.createAt.getDate() + '/' + message.createAt.getMonth()
-        // ...otherwise, set 'time' to the action time's month and year.
-        : message.createAt.getMonth() + '/' + message.createAt.getFullYear();
+        // ...and if the current hour and the action time's hour are the same...
+        ? currentDate.getHours() - TIMEZONE_OFFSET - message.createAt.getHours() === 0
+            // ...then set 'time' to the difference in minutes between the current time and the action time,
+            ? (currentDate.getMinutes() - message.createAt.getMinutes()) + ' min'
+            // ...otherwise, set 'time' to the difference in hours between the current time and the action time,
+            : (currentDate.getHours() - TIMEZONE_OFFSET - message.createAt.getHours()) + ' hour'
+        : sameYear
+            //set 'time' to the action time's date and month.
+            ? message.createAt.getDate() + '/' + message.createAt.getMonth()
+            // ...otherwise, set 'time' to the action time's month and year.
+            : message.createAt.getMonth() + '/' + message.createAt.getFullYear();
   };
 
   const handleSeen = () => {
@@ -142,6 +146,7 @@ const SideBarItem: React.FC<SideBarProp> = (props) => {
   };
 
   return (
+
     <>
       <Toaster position={'top-center'} />
       <NavLink to={`/${props.type}/${props.name}`} key={props.name}
@@ -173,9 +178,11 @@ const SideBarItem: React.FC<SideBarProp> = (props) => {
                 lastMessage && renderLastMess(lastMessage)
               }
             </p>
+
+            </div>
+
           </div>
 
-        </div>
 
         <div className="flex flex-col ml-auto">
           <p className="text-xs mb-1.5 font-normal w-max text-right">
@@ -183,10 +190,11 @@ const SideBarItem: React.FC<SideBarProp> = (props) => {
           </p>
           <span className={clsx('w-2 h-2 flex justify-center items-center ml-auto bg-red-600 rounded-full ',
             { 'invisible': !unseenRef.current })}>
+
                     </span>
-        </div>
-      </NavLink>
-    </>
+          </div>
+        </NavLink>
+      </>
   );
 };
 
