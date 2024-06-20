@@ -2,7 +2,7 @@ import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 
 export interface Message {
   name: string;
-  type: 0 | 1;
+  type: 0 | 1 | number;
   to: string;
   mes: string;
   createAt: Date;

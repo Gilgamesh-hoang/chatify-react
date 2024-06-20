@@ -14,7 +14,7 @@ import Loading from '~/component/Loading';
 import uploadFile from '~/helper/uploadFile';
 import { SocketEvent } from '~/model/SocketEvent';
 import { AppDispatch } from '~/redux/store';
-import { initCurrentChat, Message, setCurrentChat, } from '~/redux/currentChatSlice';
+import { initCurrentChat, Message, setCurrentChat } from '~/redux/currentChatSlice';
 import moment from 'moment';
 
 interface FileUploadProps {
@@ -26,6 +26,7 @@ const MessagePage = () => {
   //try to set current chat
   const { type, name } = useParams();
   const dispatch = useDispatch<AppDispatch>();
+
   dispatch(setCurrentChat({
     ...initCurrentChat,
     'type': type ? parseInt(type) : -1,
@@ -70,6 +71,21 @@ const MessagePage = () => {
     },
   };
 
+  //custom translate unicode to ascii-readable
+  const toAscii = (text: string) => {
+    let result = '';
+    for (let i = 0; i < text.length; i++)
+      result = result.concat(text.charCodeAt(i) > 255 ? '&#' + String(text.charCodeAt(i)) + ';' : text.charAt(i));
+    return result;
+  };
+  //custom translate ascii-readable to unicode
+  const fromAscii = (text: string) => {
+    return text?.replace(/&#(\d+);/gm, (substring) => {
+      let code = substring.substring(2, substring.length - 1);
+      return String.fromCharCode(parseInt(code));
+    });
+  };
+
   //when allMessage updates, try to scroll to the newest message
   useEffect(() => {
     if (currentMessage.current) {
@@ -79,33 +95,58 @@ const MessagePage = () => {
 
   //set user status triggers on socket or currentChat changed state
   useEffect(() => {
-    console.log('crigne');
-    //handle the online status
+    //handle the online status event
     const handleStatusCheck = (evt: MessageEvent) => {
       const response = JSON.parse(evt.data);
       if (!(response.event === 'CHECK_USER')) return;
       if (response.status === 'success') {
-        setUserOnline((prev) => {return prev === response.data.status ? prev : response.data.status;});
+        setUserOnline((prev) => {
+          return prev === response.data.status ? prev : response.data.status;
+        });
       } else if (response.status === 'error') {
         toast.error('Error when get status of '.concat(name || 'unknown'), { duration: 2000 });
       }
     };
+    //handle the get message call event
     const handleGetMessage = (evt: MessageEvent) => {
       const response = JSON.parse(evt.data);
       if (!(response.event === 'GET_PEOPLE_CHAT_MES' || response.event === 'GET_ROOM_CHAT_MES')) return;
-      console.log(2);
       if (response.status === 'success') {
-        const messageData: Message[] = response.event === 'GET_ROOM_CHAT_MES' ? response.data.chatData : response.data;
-        setAllMessage((prev) => { return prev === messageData ? prev : messageData;});
+        // Filter the messages for the current user.
+        let messages: Message[] = [];
+        if (response.event === 'GET_ROOM_CHAT_MES')
+          messages = response.data.chatData.filter((message: Message) => message.to === currentChat.name);
+        else {
+          messages = response.data.filter((message: Message) =>
+            (message.name === currentChat.name) || (message.to === currentChat.name));
+        }
+
+        //only get the chat that is not empty
+        if (messages.length > 0) {
+          setAllMessage((prev) => {
+            return prev === messages ? prev : messages;
+          });
+
+        }
       } else if (response.status === 'error') {
         toast.error('Error when get chat message of '.concat(name || 'unknown'), { duration: 2000 });
       }
     };
+    //handle on new message received
     const handleReceivedNewMessage = (evt: MessageEvent) => {
       const response = JSON.parse(evt.data);
       if (!(response.event === 'SEND_CHAT')) return;
-      console.log(3);
-      webSocket.send(JSON.stringify(GET_MESSAGES));
+      if (response.status === 'success') {
+        setAllMessage((prev) => {
+          return [{
+            name: response.data.name,
+            type: response.data.type,
+            to: response.data.to,
+            mes: response.data.mes,
+            createAt: new Date(Date.now() - 7 * 1000 * 3600) ,
+          }].concat(prev);
+        });
+      }
     };
 
     let interval: NodeJS.Timer;
@@ -185,6 +226,12 @@ const MessagePage = () => {
 
   //sending time
   const handleSendMessage = (event: FormEvent<HTMLFormElement>) => {
+    let messageObject = {
+      text: message.text,
+      imageUrl: message.imageUrl,
+      videoUrl: message.videoUrl,
+    };
+    messageObject.text = toAscii(messageObject.text);
     const SEND_MESSAGES: SocketEvent = {
       'action': 'onchat',
       'data': {
@@ -192,21 +239,21 @@ const MessagePage = () => {
         'data': {
           'type': currentChat.type == 0 ? 'people' : (currentChat.type == 1 ? 'room' : ''),
           'to': currentChat.name,
-          'mes': message.text,
+          'mes': JSON.stringify(messageObject),
         },
       },
     };
     event.preventDefault();
 
-    webSocket.send(JSON.stringify(SEND_MESSAGES));
     if (message.text || message.imageUrl || message.videoUrl) {
       if (webSocket) {
-        webSocket.send(JSON.stringify(GET_MESSAGES));
+        webSocket.send(JSON.stringify(SEND_MESSAGES));
         setMessage({
           text: '',
           imageUrl: '',
           videoUrl: '',
         });
+        webSocket.send(JSON.stringify(GET_MESSAGES));
       }
     }
   };
@@ -259,16 +306,35 @@ const MessagePage = () => {
           <div className="flex flex-col-reverse gap-2 py-2 mx-2 " ref={currentMessage}>
             {
               allMessage.map((msg, index) => {
+                let msgData;
+                try {
+                  msgData = JSON.parse(msg.mes);
+                } catch (e) {
+                  msgData = { 'text': msg.mes };
+                }
                 return (
-                  <div
-                    className={` p-1 py-1 rounded w-fit max-w-[280px] md:max-w-sm lg:max-w-md ${user.username == msg.name ? 'ml-auto bg-teal-100' : 'bg-white'}`}>
+                  <div className={`flex gap-1`}>
+                    {
+                      user.username !== msg.name &&
+                      <Avatar name={msg.name} type={0} width={25} height={25} imageUrl={''} />
+                    }
+                    <div
+                      className={` p-1 py-1 rounded w-fit max-w-[280px] md:max-w-sm lg:max-w-md ${user.username === msg.name ? 'ml-auto bg-teal-100' : 'bg-white'}`}>
+                      <div className="w-full relative">
 
-                    <div className="w-full relative">
-
+                      </div>
+                      <p className="px-2 ml-auto break-words">{fromAscii(msgData.text)}</p>
+                      <p className="px-2 text-xs ml-auto w-fit">
+                        {
+                          user.username !== msg.name ? msg.name : ''
+                        }
+                        &nbsp;at&nbsp;
+                        {
+                          moment(new Date(new Date(msg.createAt).getTime() + (1000 * 3600 * 7))).format('hh:mm A')
+                        }</p>
                     </div>
-                    <p className="px-2">{msg.mes}</p>
-                    <p className="text-xs ml-auto w-fit">{moment(msg.createAt).format('hh:mm')}</p>
                   </div>
+
                 );
               })
             }
