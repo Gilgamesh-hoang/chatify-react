@@ -4,6 +4,10 @@ import { isCloudinaryURL, isValidURL } from '~/utils/linkUtil';
 import { FileType } from '~/model/FileType';
 import imageError from '~/assets/image-error.png';
 import Avatar from '~/component/Avatar';
+import Tippy from '@tippyjs/react';
+import 'tippy.js/dist/tippy.css';
+import FileDownload from '~/component/FileDownload';
+import { useState } from 'react';
 
 interface MessageItemProps {
   msg: Message;
@@ -27,6 +31,7 @@ export const fromAscii = (text: string) => {
 };
 
 const MessageItem: React.FC<MessageItemProps> = ({ msg, username, type }) => {
+  const [isImageError, setImageError] = useState(false);
   const TIMEZONE_OFFSET = 7 * 3600 * 1000; //GMT+7
   const realCreateAt = new Date(new Date(msg.createAt).getTime() + TIMEZONE_OFFSET); //True time
   const fromAsciiMessage = fromAscii(msg.mes);
@@ -36,14 +41,26 @@ const MessageItem: React.FC<MessageItemProps> = ({ msg, username, type }) => {
       if (cloudinaryURL) {
         if (cloudinaryURL.isImage) {
           return (
-            <img
-              src={mes}
-              className="w-auto h-full max-h-[260px] sm:max-h-[300px] md:max-h-[280px] object-scale-down"
-              alt={mes}
-              onError={(e) => {
-                (e.target as HTMLImageElement).src = imageError;
-              }}
-            />
+            <Tippy
+              placement='right-start'
+              content={<FileDownload url={mes}/>}
+              interactive={true}
+              delay={[200, 100]}
+              animation={'shift-away'}
+              theme={'translucent'}
+              disabled={isImageError}
+            >
+              <img
+                src={mes}
+                className="w-auto h-full max-h-[260px] sm:max-h-[300px] md:max-h-[280px] object-scale-down"
+                alt={mes}
+                onError={(e) => {
+                  (e.target as HTMLImageElement).src = imageError;
+                  setImageError(true);
+                }}
+              />
+            </Tippy>
+
           );
 
         } else if (cloudinaryURL.isVideo) {
@@ -51,7 +68,8 @@ const MessageItem: React.FC<MessageItemProps> = ({ msg, username, type }) => {
                         className="w-auto h-full max-h-[260px] sm:max-h-[300px] md:max-h-[280px] object-scale-down" />;
         }
       } else {
-        return <a href={mes} target="_blank" rel="noreferrer" className={'px-2 break-words'}>{mes}</a>;
+        return <a href={mes} target="_blank" rel="noreferrer"
+                  className={'px-2 break-words text-blue-500 underline'}>{mes}</a>;
       }
 
     } else {
@@ -71,8 +89,11 @@ const MessageItem: React.FC<MessageItemProps> = ({ msg, username, type }) => {
         <div className="w-full relative">
           {renderMessageContent(fromAsciiMessage)}
         </div>
-        <p
-          className={`px-1 text-xs w-fit ${username == msg.name ? 'ml-auto' : ''}`}>{moment(realCreateAt).format('DD/MM/YYYY @ hh:mm A')}</p>
+        <p className={`px-1 text-xs w-fit ${username == msg.name ? 'ml-auto' : ''}`}>
+          {moment(realCreateAt).isSame(new Date(), 'day')
+            ? moment(realCreateAt).format('HH:mm')
+            : moment(realCreateAt).format('DD/MM/YYYY HH:mm')}
+        </p>
       </div>
     </div>
   );
