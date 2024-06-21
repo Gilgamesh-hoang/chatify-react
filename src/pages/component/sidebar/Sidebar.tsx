@@ -27,10 +27,14 @@ const Sidebar = () => {
   };
 
   useEffect(() => {
-    if (socket && statusSocket == 'open' && userName) {
+    if (socket && statusSocket === 'open' && userName) {
       socket.onmessage = (event: MessageEvent) => {
         const data = JSON.parse(event.data);
-        if (data.event === 'GET_USER_LIST' && data.status === 'success') {
+        // I wanted to reload sidebar item, but it's glitching so not yet
+        // if (data.event === 'SEND_CHAT' && data.status === 'success')
+        //   socket.send(JSON.stringify(getUserParams))
+        // else
+          if (data.event === 'GET_USER_LIST' && data.status === 'success') {
           const conversationUserData = data.data.filter((conv: any) => {
             if (conv.name != userName) {
               let sideBarProp: SideBarProp = {
@@ -41,10 +45,10 @@ const Sidebar = () => {
               };
               return sideBarProp;
             }
+            return null;
           });
           console.log('conversationUserData', conversationUserData);
           setAllUsers(conversationUserData);
-          // dispatch(socketReceivedMessage());
         }
       };
       // socket.send(JSON.stringify(getUserParams))
@@ -53,7 +57,7 @@ const Sidebar = () => {
   }, [socket, userName, statusSocket]);
 
   return (
-      <div className="w-full h-full grid grid-cols-[48px,1fr] bg-white">
+      <div className="w-full h-full grid grid-cols-[48px,1fr] lg:grid-cols-[48px,322px] bg-white">
         <NavSideBar name={user.username} />
 
         <div className="w-full">

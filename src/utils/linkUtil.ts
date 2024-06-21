@@ -10,7 +10,6 @@ const isValidURL = (str: string): boolean => {
     '(\\#[-a-z\\d_]*)?$', // mỏ neo
     'i', // cờ không phân biệt hoa thường
   );
-
   return urlPattern.test(str);
 };
 

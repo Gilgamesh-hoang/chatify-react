@@ -10,7 +10,6 @@ const Home = () => {
     const location = useLocation();
     const basePath: boolean = location.pathname === '/';
     // const username = useSelector((state: RootState) => state.user.username);
-    const username = useSelector((state: RootState) => state.app.user.username);
 
     return (
         <div className="grid lg:grid-cols-[370px,1fr] h-screen max-h-screen">
@@ -25,8 +24,8 @@ const Home = () => {
 
             <div
                 className={clsx(
-                    'bg-customBackgroundHome justify-center items-center flex-col gap-2',
-                    { hidden: !basePath, 'lg:flex': basePath }
+                    'bg-customBackgroundHome justify-center items-center flex-col gap-2 hidden',
+                    { ' lg:flex': basePath }
                 )}
             >
                 <div>

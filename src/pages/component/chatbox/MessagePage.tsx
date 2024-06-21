@@ -17,7 +17,9 @@ import { initCurrentChat, Message, setCurrentChat } from '~/redux/currentChatSli
 
 import FileUpload from '~/component/FileUpload';
 import FilePreview from '~/component/FilePreview';
-import MessageItem from '~/pages/component/chatbox/MessageItem';
+import MessageItem, { toAscii } from '~/pages/component/chatbox/MessageItem';
+import { Simulate } from 'react-dom/test-utils';
+import submit = Simulate.submit;
 
 
 interface FileUploadProps {
@@ -48,6 +50,7 @@ const MessagePage = () => {
   const currentMessage = useRef<null | HTMLDivElement>(null);
   const [selectedFile, setSelectedFile] = useState<FileUploadProps | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const submitRef = useRef<HTMLButtonElement>(null);
 
   const CHECK_USER_STATUS: SocketEvent = {
     'action': 'onchat',
@@ -61,7 +64,7 @@ const MessagePage = () => {
   const GET_MESSAGES: SocketEvent = {
     'action': 'onchat',
     'data': {
-      'event': currentChat.type == 1 ? 'GET_ROOM_CHAT_MES' : 'GET_PEOPLE_CHAT_MES',
+      'event': currentChat.type === 1 ? 'GET_ROOM_CHAT_MES' : 'GET_PEOPLE_CHAT_MES',
       'data': {
         'name': currentChat.name,
         'page': currentChat.page,
@@ -69,7 +72,7 @@ const MessagePage = () => {
     },
   };
 
-  //when allMessage updates, try to scroll to the newest message
+  //when all message updated, scroll to end automatically,
   useEffect(() => {
     if (currentMessage.current) {
       currentMessage.current.scrollIntoView({ behavior: 'smooth', block: 'end' });
@@ -78,7 +81,6 @@ const MessagePage = () => {
 
   //set user status triggers on socket or currentChat changed state
   useEffect(() => {
-    console.log('crigne');
     //handle the online status
     const handleStatusCheck = (evt: MessageEvent) => {
       const response = JSON.parse(evt.data);
@@ -91,24 +93,31 @@ const MessagePage = () => {
         toast.error('Error when get status of '.concat(name || 'unknown'), { duration: 2000 });
       }
     };
+    //handle the get_message
     const handleGetMessage = (evt: MessageEvent) => {
       const response = JSON.parse(evt.data);
       if (!(response.event === 'GET_PEOPLE_CHAT_MES' || response.event === 'GET_ROOM_CHAT_MES')) return;
-      console.log(2);
       if (response.status === 'success') {
+        //get message data
         const messageData: Message[] = response.event === 'GET_ROOM_CHAT_MES' ? response.data.chatData : response.data;
-        setAllMessage((prev) => {
-          return prev === messageData ? prev : messageData;
-        });
+        //filter it to get the desired chat for user/group
+        const filteredMessages = messageData.filter((message: Message) => (response.event !== 'GET_ROOM_CHAT_MES' && message.name === currentChat.name) || message.to === currentChat.name);
+        //and set the preferred chat to the screen
+        if (filteredMessages.length > 0) {
+          setAllMessage(filteredMessages);
+        }
       } else if (response.status === 'error') {
         toast.error('Error when get chat message of '.concat(name || 'unknown'), { duration: 2000 });
       }
     };
+    //handle the success send_chat (aka receiving new message)
     const handleReceivedNewMessage = (evt: MessageEvent) => {
       const response = JSON.parse(evt.data);
       if (!(response.event === 'SEND_CHAT')) return;
-      console.log(3);
+      //call get message to update
       webSocket.send(JSON.stringify(GET_MESSAGES));
+      //only when get new message, should the message scroll to end
+      currentMessage.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
     };
 
     let interval: NodeJS.Timer;
@@ -122,6 +131,7 @@ const MessagePage = () => {
       }, 1000);
     }
     return () => {
+      //clean up on detach
       webSocket.removeEventListener('message', handleStatusCheck);
       webSocket.removeEventListener('message', handleGetMessage);
       webSocket.removeEventListener('message', handleReceivedNewMessage);
@@ -151,9 +161,7 @@ const MessagePage = () => {
   const handleSendMessage = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     // Get the value from the input field
-
     const inputValue = inputRef.current?.value.trim();
-
 
     const createSocketEvent = (message: string): SocketEvent => ({
       'action': 'onchat',
@@ -166,7 +174,6 @@ const MessagePage = () => {
         },
       },
     });
-
     // If there is an input value or a selected file and the WebSocket is connected
     if ((inputValue || selectedFile) && webSocket) {
       if (selectedFile) {
@@ -174,22 +181,56 @@ const MessagePage = () => {
         const url = await handleUploadFile();
         if (url) {
           const SEND_FILE: SocketEvent = createSocketEvent(url);
-          webSocket.send(JSON.stringify(SEND_FILE));
+          //just in case socket is not in open state, don't send
+          if (webSocket.readyState === WebSocket.OPEN)
+            webSocket.send(JSON.stringify(SEND_FILE));
         }
-
       }
-
-      // If there is an input value
       if (inputValue) {
-        // Send a socket event with the input value
-        const SEND_MESSAGES: SocketEvent = createSocketEvent(inputValue);
-        webSocket.send(JSON.stringify(SEND_MESSAGES));
+        // Send a socket event with the input value (converted one to ascii)
+        const SEND_MESSAGES: SocketEvent = createSocketEvent(toAscii(inputValue));
+        // just in case socket is not in open state, don't send
+        if (webSocket.readyState === WebSocket.OPEN)
+          webSocket.send(JSON.stringify(SEND_MESSAGES));
         // Clear the input field
         inputRef.current && (inputRef.current.value = '');
+
+        // Add a fake message to reduce call to update chat, minus the timezone because server use gmt-0
+        // It used to works with normal text only, but file + text is broken.
+        // const messageSent: Message = {
+        //   type: currentChat.type,
+        //   name: user.username,
+        //   to: currentChat.name,
+        //   mes: toAscii(inputValue),
+        //   createAt: new Date(Date.now() - 7 * 3600 * 1000),
+        // };
+        // setAllMessage((prev) => [messageSent].concat(prev));
+        // // Dispatch a custom event specifically for send_chat, to update the side bar item on socket
+        // webSocket.dispatchEvent(new MessageEvent('message', {
+        //   //where data stored in here is name of the chat
+        //   data: JSON.stringify({
+        //     'event': 'SEND_CHAT_SUCCESS',
+        //     'status': 'success',
+        //     'data': messageSent,
+        //   }),
+        // }));
       }
-      // Request the latest messages
-      webSocket.send(JSON.stringify(GET_MESSAGES));
+      // Dispatch a custom event specifically for send_chat, to update the side bar item on socket
+      webSocket.dispatchEvent(new MessageEvent('message', {
+        //where data stored in here is name of the chat
+        data: JSON.stringify({'event': 'SEND_CHAT_SUCCESS', 'status': 'success', 'data': currentChat.name}),
+      }))
     }
+    if (submitRef.current) {
+      submitRef.current.type = 'button';
+      submitRef.current.disabled = true;
+    }
+    setTimeout(() => {
+      if (submitRef.current) {
+        submitRef.current.type = 'submit';
+        submitRef.current.disabled = false;
+      }
+    }, 10000);
   };
 
 
@@ -238,10 +279,10 @@ const MessagePage = () => {
 
 
           {/**all messages show here */}
-          <div className="flex flex-col-reverse gap-2 py-2 mx-2 ">
+          <div className="flex flex-col-reverse gap-2 py-2 mx-2 " ref={currentMessage}>
             {
               allMessage.map((msg: Message, index: number) =>
-                <MessageItem key={index} msg={msg} username={user.username} />,
+                <MessageItem key={index} msg={msg} username={user.username} type={currentChat.type === 1 ? 1 : 0} />,
               )
             }
           </div>
@@ -284,7 +325,7 @@ const MessagePage = () => {
               className="py-1 px-4 outline-none w-full h-full"
               ref={inputRef}
             />
-            <button type="submit" className="text-primary hover:text-secondary">
+            <button type="submit" className="text-primary hover:text-secondary" ref={submitRef}>
               <IoMdSend size={28} />
             </button>
           </form>
