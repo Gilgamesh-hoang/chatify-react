@@ -197,7 +197,7 @@ const SideBarItem: React.FC<SideBarProp> = (props) => {
     const message = isURL ? (isImage ? 'Send image ' : isVideo ? 'Send video ' : lastMessage.mes) : fromAscii(lastMessage.mes);
 
     return (
-      <p className={clsx('text-ellipsis line-clamp-1 text-gray-950', { 'font-bold': unseenRef.current })}>
+      <p className={clsx('overflow-hidden text-ellipsis whitespace-nowrap text-gray-950', { 'font-bold': unseenRef.current })}>
         <span>{sender + message}</span>
         {isImage && <CiImageOn className="ml-1 size-4 inline" />}
         {isVideo && <CiVideoOn className="ml-1 size-4 inline" />}

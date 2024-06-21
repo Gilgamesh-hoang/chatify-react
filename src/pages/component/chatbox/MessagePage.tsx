@@ -1,7 +1,7 @@
 import React, { FormEvent, useEffect, useRef, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { HiDotsVertical } from 'react-icons/hi';
-import { FaAngleLeft, FaPlus } from 'react-icons/fa6';
+import { FaAngleLeft } from 'react-icons/fa6';
 import { IoMdSend } from 'react-icons/io';
 import toast, { Toaster } from 'react-hot-toast';
 import { Link, useParams } from 'react-router-dom';
@@ -18,7 +18,7 @@ import { initCurrentChat, Message, setCurrentChat } from '~/redux/currentChatSli
 import FileUpload from '~/component/FileUpload';
 import FilePreview from '~/component/FilePreview';
 import MessageItem, { toAscii } from '~/pages/component/chatbox/MessageItem';
-
+import EmojiPicker from '~/component/EmojiPicker';
 
 interface FileUploadProps {
   isImage: boolean;
@@ -43,7 +43,6 @@ const MessagePage = () => {
   const statusSocket = useSelector(socketStatusSelector);
 
   const [userOnline, setUserOnline] = useState<boolean>(false);
-  const [openImageVideoUpload, setOpenImageVideoUpload] = useState(false);
   const [loading, setLoading] = useState(false);
   const [allMessage, setAllMessage] = useState<Message[]>([]);
   const currentMessage = useRef<null | HTMLDivElement>(null);
@@ -107,11 +106,14 @@ const MessagePage = () => {
         const filteredMessages = messageData.filter((message: Message) => (response.event !== 'GET_ROOM_CHAT_MES' && message.name === currentChat.name) || message.to === currentChat.name);
         //and set the preferred chat to the screen
         if (filteredMessages.length > 0) {
+          //on page 1 do normally
           if (pageTracks.current === 1) {
             setAllMessage(filteredMessages);
             //message scroll to end
             currentMessage.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
-          } else {
+          }
+          //on ther page tho, append with new data
+          else {
             setAllMessage((prev) => prev.concat(filteredMessages));
           }
           setMoreMessage(filteredMessages.length >= 50);
@@ -164,9 +166,6 @@ const MessagePage = () => {
     };
   }, [webSocket, currentChat, pageTracks]);
 
-  const handleUploadImageVideoOpen = () => {
-    setOpenImageVideoUpload(prev => !prev);
-  };
 
   const handleUploadFile = async (): Promise<string | null> => {
     if (selectedFile) {
@@ -263,7 +262,6 @@ const MessagePage = () => {
       // Then scroll to end when message was sent
       if (currentMessage.current) {
         currentMessage.current.scrollIntoView({ behavior: 'smooth', block: 'end' });
-      }
     }
   };
 
@@ -358,20 +356,12 @@ const MessagePage = () => {
 
         {/**send a message */}
         <section className="h-16 bg-white flex items-center px-4">
-          <div className="relative ">
-            <button onClick={handleUploadImageVideoOpen}
-                    className="flex justify-center items-center w-11 h-11 rounded-full hover:bg-primary hover:text-white">
-              <FaPlus size={20} />
-            </button>
 
-            {/**video and image */}
-            {
-              openImageVideoUpload && (
-                <FileUpload setSelectedFile={setSelectedFile} setOpenImageVideoUpload={setOpenImageVideoUpload} />
-              )
-            }
+          {/*show file upload*/}
+          <FileUpload setSelectedFile={setSelectedFile} />
 
-          </div>
+          {/**emoji picker */}
+          <EmojiPicker inputRef={inputRef} />
 
           {/**input box */}
           <form className="h-full w-full flex gap-2" onSubmit={handleSendMessage}>
