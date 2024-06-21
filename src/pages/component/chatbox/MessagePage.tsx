@@ -18,8 +18,6 @@ import { initCurrentChat, Message, setCurrentChat } from '~/redux/currentChatSli
 import FileUpload from '~/component/FileUpload';
 import FilePreview from '~/component/FilePreview';
 import MessageItem, { toAscii } from '~/pages/component/chatbox/MessageItem';
-import { Simulate } from 'react-dom/test-utils';
-import submit = Simulate.submit;
 
 
 interface FileUploadProps {
@@ -35,6 +33,7 @@ const MessagePage = () => {
     ...initCurrentChat,
     'type': type ? parseInt(type) : -1,
     'name': name || '',
+    'page': 1,
   }));
 
   //all selector
@@ -51,6 +50,10 @@ const MessagePage = () => {
   const [selectedFile, setSelectedFile] = useState<FileUploadProps | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const submitRef = useRef<HTMLButtonElement>(null);
+  //more message button
+  const [moreMessage, setMoreMessage] = useState<boolean>(false);
+  //track current page
+  const pageTracks = useRef<number>(1);
 
   const CHECK_USER_STATUS: SocketEvent = {
     'action': 'onchat',
@@ -73,11 +76,11 @@ const MessagePage = () => {
   };
 
   //when all message updated, scroll to end automatically,
-  useEffect(() => {
-    if (currentMessage.current) {
-      currentMessage.current.scrollIntoView({ behavior: 'smooth', block: 'end' });
-    }
-  }, [allMessage]);
+  // useEffect(() => {
+  //   if (currentMessage.current) {
+  //     currentMessage.current.scrollIntoView({ behavior: 'smooth', block: 'end' });
+  //   }
+  // }, [allMessage]);
 
   //set user status triggers on socket or currentChat changed state
   useEffect(() => {
@@ -104,7 +107,14 @@ const MessagePage = () => {
         const filteredMessages = messageData.filter((message: Message) => (response.event !== 'GET_ROOM_CHAT_MES' && message.name === currentChat.name) || message.to === currentChat.name);
         //and set the preferred chat to the screen
         if (filteredMessages.length > 0) {
-          setAllMessage(filteredMessages);
+          if (pageTracks.current === 1) {
+            setAllMessage(filteredMessages);
+            //message scroll to end
+            currentMessage.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
+          } else {
+            setAllMessage((prev) => prev.concat(filteredMessages));
+          }
+          setMoreMessage(filteredMessages.length >= 50);
         }
       } else if (response.status === 'error') {
         toast.error('Error when get chat message of '.concat(name || 'unknown'), { duration: 2000 });
@@ -113,11 +123,26 @@ const MessagePage = () => {
     //handle the success send_chat (aka receiving new message)
     const handleReceivedNewMessage = (evt: MessageEvent) => {
       const response = JSON.parse(evt.data);
-      if (!(response.event === 'SEND_CHAT')) return;
+      if (!(response.event === 'SEND_CHAT' || response.event === 'SEND_CHAT_COMPLETE')) return;
       //call get message to update
-      webSocket.send(JSON.stringify(GET_MESSAGES));
-      //only when get new message, should the message scroll to end
-      currentMessage.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
+      if (response.status === 'success') {
+        if (response.event === 'SEND_CHAT_COMPLETE' && response.data.to === currentChat.name) {
+          setAllMessage((prev) => [{
+            ...response.data,
+            createAt: new Date(response.data.createAt),
+          }].concat(prev));
+        } else if (response.event === 'SEND_CHAT') {
+          setAllMessage((prev) => [{
+            ...response.data,
+            createAt: new Date(Date.now() - 7 * 3600 * 1000),
+          },
+          ].concat(prev));
+        }
+        //only when get new message, should the message scroll to end
+        currentMessage.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
+      } else if (response.status === 'error') {
+        toast.error('Error when get chat message of '.concat(name || 'unknown'), { duration: 2000 });
+      }
     };
 
     let interval: NodeJS.Timer;
@@ -137,12 +162,11 @@ const MessagePage = () => {
       webSocket.removeEventListener('message', handleReceivedNewMessage);
       clearInterval(interval);
     };
-  }, [webSocket, currentChat]);
+  }, [webSocket, currentChat, pageTracks]);
 
   const handleUploadImageVideoOpen = () => {
     setOpenImageVideoUpload(prev => !prev);
   };
-
 
   const handleUploadFile = async (): Promise<string | null> => {
     if (selectedFile) {
@@ -168,7 +192,7 @@ const MessagePage = () => {
       'data': {
         'event': 'SEND_CHAT',
         'data': {
-          'type': currentChat.type == 0 ? 'people' : (currentChat.type == 1 ? 'room' : ''),
+          'type': currentChat.type === 0 ? 'people' : (currentChat.type === 1 ? 'room' : ''),
           'to': currentChat.name,
           'mes': message,
         },
@@ -184,6 +208,26 @@ const MessagePage = () => {
           //just in case socket is not in open state, don't send
           if (webSocket.readyState === WebSocket.OPEN)
             webSocket.send(JSON.stringify(SEND_FILE));
+
+          // Add a fake message to reduce call to update chat, minus the timezone because server use gmt-0
+          // It used to works with normal text only, but file + text is broken.
+          const messageSent: Message = {
+            type: currentChat.type,
+            name: user.username,
+            to: currentChat.name,
+            mes: url,
+            createAt: new Date(Date.now() - 7 * 3600 * 1000),
+          };
+          setAllMessage((prev) => [messageSent].concat(prev));
+          // Dispatch a custom event specifically for send_chat, to update the side bar item on socket
+          webSocket.dispatchEvent(new MessageEvent('message', {
+            //where data stored in here is name of the chat
+            data: JSON.stringify({
+              'event': 'SEND_CHAT_SUCCESS',
+              'status': 'success',
+              'data': messageSent,
+            }),
+          }));
         }
       }
       if (inputValue) {
@@ -197,42 +241,51 @@ const MessagePage = () => {
 
         // Add a fake message to reduce call to update chat, minus the timezone because server use gmt-0
         // It used to works with normal text only, but file + text is broken.
-        // const messageSent: Message = {
-        //   type: currentChat.type,
-        //   name: user.username,
-        //   to: currentChat.name,
-        //   mes: toAscii(inputValue),
-        //   createAt: new Date(Date.now() - 7 * 3600 * 1000),
-        // };
-        // setAllMessage((prev) => [messageSent].concat(prev));
-        // // Dispatch a custom event specifically for send_chat, to update the side bar item on socket
-        // webSocket.dispatchEvent(new MessageEvent('message', {
-        //   //where data stored in here is name of the chat
-        //   data: JSON.stringify({
-        //     'event': 'SEND_CHAT_SUCCESS',
-        //     'status': 'success',
-        //     'data': messageSent,
-        //   }),
-        // }));
+        const messageSent: Message = {
+          type: currentChat.type,
+          name: user.username,
+          to: currentChat.name,
+          mes: toAscii(inputValue),
+          createAt: new Date(Date.now() - 7 * 3600 * 1000),
+        };
+        setAllMessage((prev) => [messageSent].concat(prev));
+        // Dispatch a custom event specifically for send_chat, to update the side bar item on socket
+        webSocket.dispatchEvent(new MessageEvent('message', {
+          //where data stored in here is name of the chat
+          data: JSON.stringify({
+            'event': 'SEND_CHAT_SUCCESS',
+            'status': 'success',
+            'data': messageSent,
+          }),
+        }));
       }
-      // Dispatch a custom event specifically for send_chat, to update the side bar item on socket
-      webSocket.dispatchEvent(new MessageEvent('message', {
-        //where data stored in here is name of the chat
-        data: JSON.stringify({'event': 'SEND_CHAT_SUCCESS', 'status': 'success', 'data': currentChat.name}),
-      }))
-    }
-    if (submitRef.current) {
-      submitRef.current.type = 'button';
-      submitRef.current.disabled = true;
-    }
-    setTimeout(() => {
-      if (submitRef.current) {
-        submitRef.current.type = 'submit';
-        submitRef.current.disabled = false;
+
+      // Then scroll to end when message was sent
+      if (currentMessage.current) {
+        currentMessage.current.scrollIntoView({ behavior: 'smooth', block: 'end' });
       }
-    }, 10000);
+    }
   };
 
+  const loadMoreMessage = () => {
+    if (moreMessage) {
+      pageTracks.current++;
+    }
+    const GET_MESSAGE_FOR_NEW_PAGES = {
+      'action': 'onchat',
+      'data': {
+        'event': currentChat.type === 1 ? 'GET_ROOM_CHAT_MES' : 'GET_PEOPLE_CHAT_MES',
+        'data': {
+          'name': currentChat.name,
+          'page': pageTracks.current,
+        },
+      },
+    };
+    webSocket.send(JSON.stringify(GET_MESSAGE_FOR_NEW_PAGES));
+    if (currentMessage.current) {
+      currentMessage.current.scrollIntoView({ block: 'start' });
+    }
+  };
 
   return (
     <>
@@ -277,13 +330,16 @@ const MessagePage = () => {
         <section
           className="h-[calc(100vh-128px)] overflow-x-hidden overflow-y-scroll scrollbar relative bg-slate-200 bg-opacity-50">
 
-
-          {/**all messages show here */}
+          {/**all messages show here, note: it's in reverse order aka the elements are place upward */}
           <div className="flex flex-col-reverse gap-2 py-2 mx-2 " ref={currentMessage}>
             {
               allMessage.map((msg: Message, index: number) =>
                 <MessageItem key={index} msg={msg} username={user.username} type={currentChat.type === 1 ? 1 : 0} />,
               )
+            }
+            {
+              moreMessage && <button className={'p-4 bg-cyan-200 bg-opacity-75'} onClick={loadMoreMessage}>Read more
+                messages...</button>
             }
           </div>
 
