@@ -1,7 +1,7 @@
 import React, { FormEvent, useEffect, useRef, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { HiDotsVertical } from 'react-icons/hi';
-import { FaAngleLeft, FaPlus } from 'react-icons/fa6';
+import { FaAngleLeft } from 'react-icons/fa6';
 import { IoMdSend } from 'react-icons/io';
 import toast, { Toaster } from 'react-hot-toast';
 import { Link, useParams } from 'react-router-dom';
@@ -18,9 +18,7 @@ import { initCurrentChat, Message, setCurrentChat } from '~/redux/currentChatSli
 import FileUpload from '~/component/FileUpload';
 import FilePreview from '~/component/FilePreview';
 import MessageItem, { toAscii } from '~/pages/component/chatbox/MessageItem';
-import { Simulate } from 'react-dom/test-utils';
-import submit = Simulate.submit;
-
+import EmojiPicker from '~/component/EmojiPicker';
 
 interface FileUploadProps {
   isImage: boolean;
@@ -44,7 +42,6 @@ const MessagePage = () => {
   const statusSocket = useSelector(socketStatusSelector);
 
   const [userOnline, setUserOnline] = useState<boolean>(false);
-  const [openImageVideoUpload, setOpenImageVideoUpload] = useState(false);
   const [loading, setLoading] = useState(false);
   const [allMessage, setAllMessage] = useState<Message[]>([]);
   const currentMessage = useRef<null | HTMLDivElement>(null);
@@ -139,10 +136,6 @@ const MessagePage = () => {
     };
   }, [webSocket, currentChat]);
 
-  const handleUploadImageVideoOpen = () => {
-    setOpenImageVideoUpload(prev => !prev);
-  };
-
 
   const handleUploadFile = async (): Promise<string | null> => {
     if (selectedFile) {
@@ -194,43 +187,23 @@ const MessagePage = () => {
           webSocket.send(JSON.stringify(SEND_MESSAGES));
         // Clear the input field
         inputRef.current && (inputRef.current.value = '');
-
-        // Add a fake message to reduce call to update chat, minus the timezone because server use gmt-0
-        // It used to works with normal text only, but file + text is broken.
-        // const messageSent: Message = {
-        //   type: currentChat.type,
-        //   name: user.username,
-        //   to: currentChat.name,
-        //   mes: toAscii(inputValue),
-        //   createAt: new Date(Date.now() - 7 * 3600 * 1000),
-        // };
-        // setAllMessage((prev) => [messageSent].concat(prev));
-        // // Dispatch a custom event specifically for send_chat, to update the side bar item on socket
-        // webSocket.dispatchEvent(new MessageEvent('message', {
-        //   //where data stored in here is name of the chat
-        //   data: JSON.stringify({
-        //     'event': 'SEND_CHAT_SUCCESS',
-        //     'status': 'success',
-        //     'data': messageSent,
-        //   }),
-        // }));
       }
       // Dispatch a custom event specifically for send_chat, to update the side bar item on socket
       webSocket.dispatchEvent(new MessageEvent('message', {
         //where data stored in here is name of the chat
-        data: JSON.stringify({'event': 'SEND_CHAT_SUCCESS', 'status': 'success', 'data': currentChat.name}),
-      }))
+        data: JSON.stringify({ 'event': 'SEND_CHAT_SUCCESS', 'status': 'success', 'data': currentChat.name }),
+      }));
     }
-    if (submitRef.current) {
-      submitRef.current.type = 'button';
-      submitRef.current.disabled = true;
-    }
-    setTimeout(() => {
-      if (submitRef.current) {
-        submitRef.current.type = 'submit';
-        submitRef.current.disabled = false;
-      }
-    }, 10000);
+    // if (submitRef.current) {
+    //   submitRef.current.type = 'button';
+    //   submitRef.current.disabled = true;
+    // }
+    // setTimeout(() => {
+    //   if (submitRef.current) {
+    //     submitRef.current.type = 'submit';
+    //     submitRef.current.disabled = false;
+    //   }
+    // }, 10000);
   };
 
 
@@ -302,20 +275,12 @@ const MessagePage = () => {
 
         {/**send a message */}
         <section className="h-16 bg-white flex items-center px-4">
-          <div className="relative ">
-            <button onClick={handleUploadImageVideoOpen}
-                    className="flex justify-center items-center w-11 h-11 rounded-full hover:bg-primary hover:text-white">
-              <FaPlus size={20} />
-            </button>
 
-            {/**video and image */}
-            {
-              openImageVideoUpload && (
-                <FileUpload setSelectedFile={setSelectedFile} setOpenImageVideoUpload={setOpenImageVideoUpload} />
-              )
-            }
+          {/*show file upload*/}
+          <FileUpload setSelectedFile={setSelectedFile} />
 
-          </div>
+          {/**emoji picker */}
+          <EmojiPicker inputRef={inputRef} />
 
           {/**input box */}
           <form className="h-full w-full flex gap-2" onSubmit={handleSendMessage}>
