@@ -33,6 +33,7 @@ const SideBarItem: React.FC<SideBarProp> = (props) => {
   const unseenRef = useRef<boolean>(
 
     JSON.parse(localStorage.getItem(`unseen_${props.name}`) || 'false'));
+  const timeRef = useRef<HTMLParagraphElement>(null);
 
 
   // const [unseen, setUnseen] = useState<boolean>(unseenRef.current);
@@ -97,9 +98,41 @@ const SideBarItem: React.FC<SideBarProp> = (props) => {
         return;
       // ...now send a request get new message.
       socket.send(JSON.stringify(getMessParams))
-    } else if (response.status === 'error') {
-      toast.error('Error when get received message', { duration: 2000 });
     }
+
+    //The below function was the fake sync to reduce call to socket, HOWEVER the file + text combo sucks with
+    //this, big time, so uncomment this if you are confident to solve it
+    // if (response.status === 'success') {
+    //   // Retrieve the message
+    //   const messageData:LastMessage = response.data;
+    //   // If it's a send chat success,...
+    //   if (response.event === 'SEND_CHAT_SUCCESS' && response.data.to === props.name) {
+    //     console.log("SENT: "+ JSON.stringify(response.data))
+    //     // Update the `lastMessage` state. taken from event so no need to minus timezone
+    //     setLastMessage({
+    //       ...messageData,
+    //       createAt: new Date(new Date(response.data.createAt).getTime()),
+    //     });
+    //     handleSeen()
+    //   }
+    //   else if (response.event === 'SEND_CHAT' && response.data.name === props.name && response.data.to === user.username) {
+    //     console.log("RECEIVED "+ JSON.stringify(response.data))
+    //     // Update the `lastMessage` state. taken from Date.now() so need to minus timezone
+    //     setLastMessage({
+    //       ...messageData,
+    //       createAt: new Date(Date.now() - 7 * 3600 * 1000),
+    //     });
+    //     // Check if the message is for the current user and it's unseen.
+    //     if (messageData.to === userName && !unseenRef.current) {
+    //       // Mark the message as seen.
+    //       unseenRef.current = true;
+    //       // Update the unseen status in localStorage.
+    //       localStorage.setItem(`unseen_${props.name}`, JSON.stringify(true));
+    //     }
+    //   }
+    // } else if (response.status === 'error') {
+    //   toast.error('Error when get received message', { duration: 2000 });
+    // }
   }
 
   // This effect runs when the `socket` or `lastMessage` changes.
@@ -110,6 +143,7 @@ const SideBarItem: React.FC<SideBarProp> = (props) => {
       socket.addEventListener('message', handleMessage);
       // Add the check for new message happens OR send message success
       socket.addEventListener('message', handleNewMessage);
+      // Create timeout to retrieve new message
       timeout = setTimeout(() => {
         socket.send(JSON.stringify(getMessParams));
       }, 1000);
@@ -143,10 +177,19 @@ const SideBarItem: React.FC<SideBarProp> = (props) => {
             : message.createAt.getMonth() + '/' + message.createAt.getFullYear();
   };
 
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (timeRef.current)
+        timeRef.current.innerHTML = lastMessage ? getTime(lastMessage) : '';
+    }, 1000)
+    return () => {
+      clearInterval(interval)
+    }
+  }, [socket, lastMessage]);
+
   const handleSeen = () => {
     unseenRef.current = false;
     localStorage.setItem(`unseen_${props.name}`, JSON.stringify(false));
-
     // setUnseen(false);
   };
 
@@ -168,7 +211,6 @@ const SideBarItem: React.FC<SideBarProp> = (props) => {
   };
 
   return (
-
     <>
       <Toaster position={'top-center'} />
       <NavLink to={`/${props.type}/${props.name}`} key={props.name}
@@ -202,8 +244,8 @@ const SideBarItem: React.FC<SideBarProp> = (props) => {
 
 
         <div className="flex flex-col ml-auto">
-          <p className="text-xs mb-1.5 font-normal w-max text-right">
-            {lastMessage ? getTime(lastMessage) : ''}
+          <p className="text-xs mb-1.5 font-normal w-max text-right" ref={timeRef}>
+
           </p>
           <span className={clsx('w-2 h-2 flex justify-center items-center ml-auto bg-red-600 rounded-full ',
             { 'invisible': !unseenRef.current })}></span>

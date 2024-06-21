@@ -18,6 +18,8 @@ import { initCurrentChat, Message, setCurrentChat } from '~/redux/currentChatSli
 import FileUpload from '~/component/FileUpload';
 import FilePreview from '~/component/FilePreview';
 import MessageItem, { toAscii } from '~/pages/component/chatbox/MessageItem';
+import { Simulate } from 'react-dom/test-utils';
+import submit = Simulate.submit;
 
 
 interface FileUploadProps {
@@ -48,6 +50,7 @@ const MessagePage = () => {
   const currentMessage = useRef<null | HTMLDivElement>(null);
   const [selectedFile, setSelectedFile] = useState<FileUploadProps | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const submitRef = useRef<HTMLButtonElement>(null);
 
   const CHECK_USER_STATUS: SocketEvent = {
     'action': 'onchat',
@@ -69,8 +72,7 @@ const MessagePage = () => {
     },
   };
 
-  //when allMessage updates, try to scroll to the newest message (UNFORTUNATELY, webSocket always send getMessage
-  //which in turns, allMessage always update and the current message starts scroll to end, so bye this function
+  //when all message updated, scroll to end automatically,
   useEffect(() => {
     if (currentMessage.current) {
       currentMessage.current.scrollIntoView({ behavior: 'smooth', block: 'end' });
@@ -99,7 +101,7 @@ const MessagePage = () => {
         //get message data
         const messageData: Message[] = response.event === 'GET_ROOM_CHAT_MES' ? response.data.chatData : response.data;
         //filter it to get the desired chat for user/group
-        const filteredMessages = messageData.filter((message:Message) => (response.event !== 'GET_ROOM_CHAT_MES' && message.name === currentChat.name) || message.to === currentChat.name)
+        const filteredMessages = messageData.filter((message: Message) => (response.event !== 'GET_ROOM_CHAT_MES' && message.name === currentChat.name) || message.to === currentChat.name);
         //and set the preferred chat to the screen
         if (filteredMessages.length > 0) {
           setAllMessage(filteredMessages);
@@ -125,7 +127,7 @@ const MessagePage = () => {
     if (webSocket) {
       webSocket.send(JSON.stringify(GET_MESSAGES));
       interval = setInterval(() => {
-          webSocket.send(JSON.stringify(CHECK_USER_STATUS));
+        webSocket.send(JSON.stringify(CHECK_USER_STATUS));
       }, 1000);
     }
     return () => {
@@ -161,7 +163,6 @@ const MessagePage = () => {
     // Get the value from the input field
     const inputValue = inputRef.current?.value.trim();
 
-
     const createSocketEvent = (message: string): SocketEvent => ({
       'action': 'onchat',
       'data': {
@@ -173,7 +174,6 @@ const MessagePage = () => {
         },
       },
     });
-
     // If there is an input value or a selected file and the WebSocket is connected
     if ((inputValue || selectedFile) && webSocket) {
       if (selectedFile) {
@@ -184,34 +184,36 @@ const MessagePage = () => {
           //just in case socket is not in open state, don't send
           if (webSocket.readyState === WebSocket.OPEN)
             webSocket.send(JSON.stringify(SEND_FILE));
-          //add a fake message to reduce call to update chat
-          setAllMessage((prev) => [{
-            type: currentChat.type,
-            name: user.username,
-            to: currentChat.name,
-            mes: url,
-            createAt: new Date(Date.now() + 7 * 3600 * 1000),
-          }].concat(prev))
         }
       }
-
-      // If there is an input value
       if (inputValue) {
         // Send a socket event with the input value (converted one to ascii)
         const SEND_MESSAGES: SocketEvent = createSocketEvent(toAscii(inputValue));
         // just in case socket is not in open state, don't send
         if (webSocket.readyState === WebSocket.OPEN)
           webSocket.send(JSON.stringify(SEND_MESSAGES));
-        // add a fake message to reduce call to update chat
-        setAllMessage((prev) => [{
-          type: currentChat.type,
-          name: user.username,
-          to: currentChat.name,
-          mes: toAscii(inputValue),
-          createAt: new Date(Date.now() + 7 * 3600 * 1000),
-        }].concat(prev))
         // Clear the input field
         inputRef.current && (inputRef.current.value = '');
+
+        // Add a fake message to reduce call to update chat, minus the timezone because server use gmt-0
+        // It used to works with normal text only, but file + text is broken.
+        // const messageSent: Message = {
+        //   type: currentChat.type,
+        //   name: user.username,
+        //   to: currentChat.name,
+        //   mes: toAscii(inputValue),
+        //   createAt: new Date(Date.now() - 7 * 3600 * 1000),
+        // };
+        // setAllMessage((prev) => [messageSent].concat(prev));
+        // // Dispatch a custom event specifically for send_chat, to update the side bar item on socket
+        // webSocket.dispatchEvent(new MessageEvent('message', {
+        //   //where data stored in here is name of the chat
+        //   data: JSON.stringify({
+        //     'event': 'SEND_CHAT_SUCCESS',
+        //     'status': 'success',
+        //     'data': messageSent,
+        //   }),
+        // }));
       }
       // Dispatch a custom event specifically for send_chat, to update the side bar item on socket
       webSocket.dispatchEvent(new MessageEvent('message', {
@@ -219,6 +221,16 @@ const MessagePage = () => {
         data: JSON.stringify({'event': 'SEND_CHAT_SUCCESS', 'status': 'success', 'data': currentChat.name}),
       }))
     }
+    if (submitRef.current) {
+      submitRef.current.type = 'button';
+      submitRef.current.disabled = true;
+    }
+    setTimeout(() => {
+      if (submitRef.current) {
+        submitRef.current.type = 'submit';
+        submitRef.current.disabled = false;
+      }
+    }, 10000);
   };
 
 
@@ -270,7 +282,7 @@ const MessagePage = () => {
           <div className="flex flex-col-reverse gap-2 py-2 mx-2 " ref={currentMessage}>
             {
               allMessage.map((msg: Message, index: number) =>
-                <MessageItem key={index} msg={msg} username={user.username} />,
+                <MessageItem key={index} msg={msg} username={user.username} type={currentChat.type === 1 ? 1 : 0} />,
               )
             }
           </div>
@@ -313,7 +325,7 @@ const MessagePage = () => {
               className="py-1 px-4 outline-none w-full h-full"
               ref={inputRef}
             />
-            <button type="submit" className="text-primary hover:text-secondary">
+            <button type="submit" className="text-primary hover:text-secondary" ref={submitRef}>
               <IoMdSend size={28} />
             </button>
           </form>
