@@ -61,7 +61,7 @@ const MessagePage = () => {
   const GET_MESSAGES: SocketEvent = {
     'action': 'onchat',
     'data': {
-      'event': currentChat.type == 1 ? 'GET_ROOM_CHAT_MES' : 'GET_PEOPLE_CHAT_MES',
+      'event': currentChat.type === 1 ? 'GET_ROOM_CHAT_MES' : 'GET_PEOPLE_CHAT_MES',
       'data': {
         'name': currentChat.name,
         'page': currentChat.page,
@@ -71,11 +71,11 @@ const MessagePage = () => {
 
   //when allMessage updates, try to scroll to the newest message (UNFORTUNATELY, webSocket always send getMessage
   //which in turns, allMessage always update and the current message starts scroll to end, so bye this function
-  // useEffect(() => {
-  //   if (currentMessage.current) {
-  //     currentMessage.current.scrollIntoView({ behavior: 'smooth', block: 'end' });
-  //   }
-  // }, [allMessage]);
+  useEffect(() => {
+    if (currentMessage.current) {
+      currentMessage.current.scrollIntoView({ behavior: 'smooth', block: 'end' });
+    }
+  }, [allMessage]);
 
   //set user status triggers on socket or currentChat changed state
   useEffect(() => {
@@ -99,11 +99,7 @@ const MessagePage = () => {
         //get message data
         const messageData: Message[] = response.event === 'GET_ROOM_CHAT_MES' ? response.data.chatData : response.data;
         //filter it to get the desired chat for user/group
-        let filteredMessages;
-        if (response.event === 'GET_ROOM_CHAT_MES')
-          filteredMessages = response.data.chatData.filter((message:Message) => message.to === currentChat.name)
-        else
-          filteredMessages = response.data.filter((message:Message) => message.name == currentChat.name || message.to === currentChat.name)
+        const filteredMessages = messageData.filter((message:Message) => (response.event !== 'GET_ROOM_CHAT_MES' && message.name === currentChat.name) || message.to === currentChat.name)
         //and set the preferred chat to the screen
         if (filteredMessages.length > 0) {
           setAllMessage(filteredMessages);
@@ -117,9 +113,7 @@ const MessagePage = () => {
       const response = JSON.parse(evt.data);
       if (!(response.event === 'SEND_CHAT')) return;
       //call get message to update
-      //just in case socket is in connecting state
-      if (webSocket.readyState === WebSocket.OPEN)
-        webSocket.send(JSON.stringify(GET_MESSAGES));
+      webSocket.send(JSON.stringify(GET_MESSAGES));
       //only when get new message, should the message scroll to end
       currentMessage.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
     };
@@ -129,12 +123,8 @@ const MessagePage = () => {
     webSocket.addEventListener('message', handleGetMessage);
     webSocket.addEventListener('message', handleReceivedNewMessage);
     if (webSocket) {
-      //just in case socket is in connecting state
-      if (webSocket.readyState === WebSocket.OPEN)
-        webSocket.send(JSON.stringify(GET_MESSAGES));
+      webSocket.send(JSON.stringify(GET_MESSAGES));
       interval = setInterval(() => {
-        //just in case socket is in connecting state
-        if (webSocket.readyState === WebSocket.OPEN)
           webSocket.send(JSON.stringify(CHECK_USER_STATUS));
       }, 1000);
     }
@@ -169,7 +159,6 @@ const MessagePage = () => {
   const handleSendMessage = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     // Get the value from the input field
-
     const inputValue = inputRef.current?.value.trim();
 
 
@@ -192,9 +181,17 @@ const MessagePage = () => {
         const url = await handleUploadFile();
         if (url) {
           const SEND_FILE: SocketEvent = createSocketEvent(url);
-          //just in case socket is in connecting state
+          //just in case socket is not in open state, don't send
           if (webSocket.readyState === WebSocket.OPEN)
             webSocket.send(JSON.stringify(SEND_FILE));
+          //add a fake message to reduce call to update chat
+          setAllMessage((prev) => [{
+            type: currentChat.type,
+            name: user.username,
+            to: currentChat.name,
+            mes: url,
+            createAt: new Date(Date.now() + 7 * 3600 * 1000),
+          }].concat(prev))
         }
       }
 
@@ -202,18 +199,25 @@ const MessagePage = () => {
       if (inputValue) {
         // Send a socket event with the input value (converted one to ascii)
         const SEND_MESSAGES: SocketEvent = createSocketEvent(toAscii(inputValue));
-        //just in case socket is in connecting state
+        // just in case socket is not in open state, don't send
         if (webSocket.readyState === WebSocket.OPEN)
           webSocket.send(JSON.stringify(SEND_MESSAGES));
+        // add a fake message to reduce call to update chat
+        setAllMessage((prev) => [{
+          type: currentChat.type,
+          name: user.username,
+          to: currentChat.name,
+          mes: toAscii(inputValue),
+          createAt: new Date(Date.now() + 7 * 3600 * 1000),
+        }].concat(prev))
         // Clear the input field
         inputRef.current && (inputRef.current.value = '');
       }
-      // Request the latest messages
-      //just in case socket is in connecting state
-      if (webSocket.readyState === WebSocket.OPEN)
-        webSocket.send(JSON.stringify(GET_MESSAGES));
-      // And scroll the view to bottom to ensure that message is there
-      currentMessage.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
+      // Dispatch a custom event specifically for send_chat, to update the side bar item on socket
+      webSocket.dispatchEvent(new MessageEvent('message', {
+        //where data stored in here is name of the chat
+        data: JSON.stringify({'event': 'SEND_CHAT_SUCCESS', 'status': 'success', 'data': currentChat.name}),
+      }))
     }
   };
 
