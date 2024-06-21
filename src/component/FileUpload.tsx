@@ -29,7 +29,7 @@ const FileUpload: React.FC<FileUploadProps> = ({ setSelectedFile, setOpenImageVi
       setSelectedFile({ isImage, file });
       setOpenImageVideoUpload(false);
     } else {
-      toast.error(`Incorrect ${isImage ? 'ảnh' : 'video'} format`, {
+      toast.error(`Incorrect ${isImage ? 'image' : 'video'} format`, {
         duration: 3000,
       });
     }

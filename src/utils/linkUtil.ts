@@ -1,17 +1,14 @@
 import { FileType } from '~/model/FileType';
 
 const isValidURL = (str: string): boolean => {
-  const urlPattern = new RegExp(
-    '^(https?:\\/\\/)?' + // giao thức
-    '((([a-z\\d]([a-z\\d-]*[a-z\\d])*)\\.?)+[a-z]{2,}|' + // tên miền
-    '((\\d{1,3}\\.){3}\\d{1,3}))' + // hoặc địa chỉ IP (IPv4)
-    '(\\:\\d+)?(\\/[-a-z\\d%_.~+]*)*' + // cổng và đường dẫn
-    '(\\?[;&a-z\\d%_.~+=-]*)?' + // chuỗi truy vấn
-    '(\\#[-a-z\\d_]*)?$', // mỏ neo
-    'i', // cờ không phân biệt hoa thường
-  );
-  return urlPattern.test(str);
+  try {
+    new URL(str);
+    return true;
+  } catch (err) {
+    return false;
+  }
 };
+
 
 const isCloudinaryURL = (str: string): FileType | null => {
   if (!isValidURL(str)) return null;
