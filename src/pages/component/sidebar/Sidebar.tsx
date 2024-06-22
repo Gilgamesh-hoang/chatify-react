@@ -8,10 +8,8 @@ import {SocketEvent} from '~/model/SocketEvent';
 import {SideBarProp} from '~/model/SideBarProp';
 import {AppDispatch} from '~/redux/store';
 import {socketSendMessage} from '~/redux/socketSlice';
-import {useParams} from 'react-router-dom';
 
 const Sidebar = () => {
-  const {type, name} = useParams();
   const user: UserState = useSelector(userSelector);
   const userName = user.username;
   const [allUsers, setAllUsers] = useState<SideBarProp[]>([]);
@@ -31,12 +29,12 @@ const Sidebar = () => {
       socket.onmessage = (event: MessageEvent) => {
         const data = JSON.parse(event.data);
         // I wanted to reload sidebar item, but it's glitching so not yet
-        // if (data.event === 'SEND_CHAT' && data.status === 'success')
-        //   socket.send(JSON.stringify(getUserParams))
-        // else
+        if ((data.event === 'SEND_CHAT' || data.event === 'SEND_CHAT_SUCCESS') && data.status === 'success')
+          socket.send(JSON.stringify(getUserParams))
+        else
           if (data.event === 'GET_USER_LIST' && data.status === 'success') {
           const conversationUserData = data.data.filter((conv: any) => {
-            if (conv.name != userName) {
+            if (conv.name !== userName) {
               let sideBarProp: SideBarProp = {
                 type: conv.type,
                 name: conv.name,
