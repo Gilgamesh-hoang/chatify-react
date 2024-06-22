@@ -51,7 +51,7 @@ const MessagePage = () => {
   //more message button
   const [moreMessage, setMoreMessage] = useState<boolean>(false);
   //track current page
-  const pageTracks = useRef<number>(1);
+  const pageTracks = useRef<number>(currentChat.page);
 
   const CHECK_USER_STATUS: SocketEvent = {
     'action': 'onchat',
@@ -82,6 +82,8 @@ const MessagePage = () => {
 
   //set user status triggers on socket or currentChat changed state
   useEffect(() => {
+    //on page startup, set pageTracks to 1
+    pageTracks.current = 1;
     //handle the online status
     const handleStatusCheck = (evt: MessageEvent) => {
       const response = JSON.parse(evt.data);
@@ -163,7 +165,7 @@ const MessagePage = () => {
       webSocket.removeEventListener('message', handleReceivedNewMessage);
       clearInterval(interval);
     };
-  }, [webSocket, currentChat, pageTracks, name]);
+  }, [webSocket, currentChat, name]);
 
 
   const handleUploadFile = async (): Promise<string | null> => {
@@ -266,120 +268,122 @@ const MessagePage = () => {
 
   };
 
-    const loadMoreMessage = () => {
-      if (moreMessage) {
-        pageTracks.current++;
-      }
-      const GET_MESSAGE_FOR_NEW_PAGES = {
-        'action': 'onchat',
+  const loadMoreMessage = () => {
+    if (!moreMessage) return;
+    pageTracks.current++;
+    const GET_MESSAGE_FOR_NEW_PAGES = {
+      'action': 'onchat',
+      'data': {
+        'event': currentChat.type === 1 ? 'GET_ROOM_CHAT_MES' : 'GET_PEOPLE_CHAT_MES',
         'data': {
-          'event': currentChat.type === 1 ? 'GET_ROOM_CHAT_MES' : 'GET_PEOPLE_CHAT_MES',
-          'data': {
-            'name': currentChat.name,
-            'page': pageTracks.current,
-          },
+          'name': currentChat.name,
+          'page': pageTracks.current,
         },
-      };
-      webSocket.send(JSON.stringify(GET_MESSAGE_FOR_NEW_PAGES));
-      if (currentMessage.current) {
-        currentMessage.current.scrollIntoView({ block: 'start' });
-      }
+      },
     };
+    webSocket.send(JSON.stringify(GET_MESSAGE_FOR_NEW_PAGES));
+    if (currentMessage.current) {
+      currentMessage.current.scrollIntoView({ block: 'start' });
+    }
+  };
 
-    return (
-      <>
-        <Toaster
-          position="top-center"
-          reverseOrder={false}
-        />
-        <div style={{ backgroundImage: `url(${backgroundImage})` }} className="bg-no-repeat bg-cover" key={name}>
-          <header className="sticky top-0 h-16 bg-white flex justify-between items-center px-4">
-            <div className="flex items-center gap-4">
-              <Link to={'/'} className="lg:hidden">
-                <FaAngleLeft size={25} />
-              </Link>
-              <div>
-                <Avatar
-                  width={50}
-                  height={50}
-                  imageUrl={currentChat.profile_pic}
-                  name={currentChat.name}
-                  type={currentChat.type}
-                />
-              </div>
-              <div>
-                <h3 className="font-semibold text-lg my-0 text-ellipsis line-clamp-1">{currentChat.name}</h3>
-                <p className="-my-2 text-sm">
-                  {
-                    userOnline ? <span className="text-primary">online</span> :
-                      <span className="text-slate-400">offline</span>
-                  }
-                </p>
-              </div>
-            </div>
-
+  return (
+    <>
+      <Toaster
+        position="top-center"
+        reverseOrder={false}
+      />
+      <div style={{ backgroundImage: `url(${backgroundImage})` }} className="bg-no-repeat bg-cover" key={name}>
+        <header className="sticky top-0 h-16 bg-white flex justify-between items-center px-4">
+          <div className="flex items-center gap-4">
+            <Link to={'/'} className="lg:hidden">
+              <FaAngleLeft size={25} />
+            </Link>
             <div>
-              <button className="cursor-pointer hover:text-primary">
-                <HiDotsVertical />
-              </button>
+              <Avatar
+                width={50}
+                height={50}
+                imageUrl={currentChat.profile_pic}
+                name={currentChat.name}
+                type={currentChat.type}
+              />
             </div>
-          </header>
-
-          {/***show all messages */}
-          <section
-            className="h-[calc(100vh-128px)] overflow-x-hidden overflow-y-scroll scrollbar relative bg-slate-200 bg-opacity-50">
-
-            {/**all messages show here, note: it's in reverse order aka the elements are place upward */}
-            <div className="flex flex-col-reverse gap-2 py-2 mx-2 " ref={currentMessage}>
-              {
-                allMessage.map((msg: Message, index: number) =>
-                  <MessageItem key={index} msg={msg} username={user.username} type={currentChat.type === 1 ? 1 : 0} />,
-                )
-              }
-              {
-                moreMessage && <button className={'p-4 bg-cyan-200 bg-opacity-75'} onClick={loadMoreMessage}>Read more
-                  messages...</button>
-              }
+            <div>
+              <h3 className="font-semibold text-lg my-0 text-ellipsis line-clamp-1">{currentChat.name}</h3>
+              <p className="-my-2 text-sm">
+                {
+                  userOnline ? <span className="text-primary">online</span> :
+                    <span className="text-slate-400">offline</span>
+                }
+              </p>
             </div>
+          </div>
 
+          <div>
+            <button className="cursor-pointer hover:text-primary">
+              <HiDotsVertical />
+            </button>
+          </div>
+        </header>
 
-            {/**upload Image display */}
-            {selectedFile && <FilePreview selectedFile={selectedFile} setSelectedFile={setSelectedFile} />}
+        {/***show all messages */}
+        <section
+          className="h-[calc(100vh-128px)] overflow-x-hidden overflow-y-scroll scrollbar relative bg-slate-200 bg-opacity-50">
 
+          {/**all messages show here, note: it's in reverse order aka the elements are place upward */}
+          <div className="flex flex-col-reverse gap-2 py-2 mx-2 " ref={currentMessage}>
             {
-              loading && (
-                <div className="w-full h-full flex sticky bottom-0 justify-center items-center">
-                  <Loading />
-                </div>
+              allMessage.map((msg: Message, index: number) =>
+                <MessageItem key={index} msg={msg} username={user.username} type={currentChat.type === 1 ? 1 : 0} />,
               )
             }
-          </section>
+            {
+              moreMessage && <button className={'p-4 bg-cyan-200 bg-opacity-75'} onClick={loadMoreMessage}>Read more
+                messages...</button>
+            }
+            {
+              !moreMessage && <p className={'text-center'}>You have read all messages!</p>
+            }
+          </div>
 
-          {/**send a message */}
-          <section className="h-16 bg-white flex items-center px-4">
 
-            {/*show file upload*/}
-            <FileUpload setSelectedFile={setSelectedFile} />
+          {/**upload Image display */}
+          {selectedFile && <FilePreview selectedFile={selectedFile} setSelectedFile={setSelectedFile} />}
 
-            {/**emoji picker */}
-            <EmojiPicker inputRef={inputRef} />
+          {
+            loading && (
+              <div className="w-full h-full flex sticky bottom-0 justify-center items-center">
+                <Loading />
+              </div>
+            )
+          }
+        </section>
 
-            {/**input box */}
-            <form className="h-full w-full flex gap-2" onSubmit={handleSendMessage}>
-              <input
-                type="text"
-                placeholder="Type here message..."
-                className="py-1 px-4 outline-none w-full h-full"
-                ref={inputRef}
-              />
-              <button type="submit" className="text-primary hover:text-secondary" ref={submitRef}>
-                <IoMdSend size={28} />
-              </button>
-            </form>
+        {/**send a message */}
+        <section className="h-16 bg-white flex items-center px-4">
 
-          </section>
-        </div>
-      </>
-    );
-  };
+          {/*show file upload*/}
+          <FileUpload setSelectedFile={setSelectedFile} />
+
+          {/**emoji picker */}
+          <EmojiPicker inputRef={inputRef} />
+
+          {/**input box */}
+          <form className="h-full w-full flex gap-2" onSubmit={handleSendMessage}>
+            <input
+              type="text"
+              placeholder="Type here message..."
+              className="py-1 px-4 outline-none w-full h-full"
+              ref={inputRef}
+            />
+            <button type="submit" className="text-primary hover:text-secondary" ref={submitRef}>
+              <IoMdSend size={28} />
+            </button>
+          </form>
+
+        </section>
+      </div>
+    </>
+  );
+};
 export default MessagePage;
