@@ -10,8 +10,8 @@ import { SideBarItem } from '~/pages/component/sidebar';
 import NavSideBar from '~/pages/component/NavSideBar';
 import { SocketEvent } from '~/model/SocketEvent';
 import { SideBarProp } from '~/model/SideBarProp';
-import { AppDispatch, RootState } from '~/redux/store';
-import { socketReceivedMessage, socketSendMessage } from '~/redux/socketSlice';
+import { AppDispatch } from '~/redux/store';
+import { socketSendMessage } from '~/redux/socketSlice';
 import { useParams } from 'react-router-dom';
 
 const Sidebar = () => {
@@ -31,9 +31,13 @@ const Sidebar = () => {
   };
 
   useEffect(() => {
-    if (socket && statusSocket == 'open' && userName) {
+    if (socket && statusSocket === 'open' && userName) {
       socket.onmessage = (event: MessageEvent) => {
         const data = JSON.parse(event.data);
+        // I wanted to reload sidebar item, but it's glitching so not yet
+        // if (data.event === 'SEND_CHAT' && data.status === 'success')
+        //   socket.send(JSON.stringify(getUserParams))
+        // else
         if (data.event === 'GET_USER_LIST' && data.status === 'success') {
           const conversationUserData = data.data.filter((conv: any) => {
             if (conv.name != userName) {
@@ -45,10 +49,10 @@ const Sidebar = () => {
               };
               return sideBarProp;
             }
+            return null;
           });
           console.log('conversationUserData', conversationUserData);
           setAllUsers(conversationUserData);
-          // dispatch(socketReceivedMessage());
         }
       };
       // socket.send(JSON.stringify(getUserParams))
@@ -57,7 +61,7 @@ const Sidebar = () => {
   }, [socket, userName, statusSocket]);
 
   return (
-    <div className="w-full h-full grid grid-cols-[48px,1fr] bg-white">
+    <div className="w-full h-full grid grid-cols-[48px,1fr] lg:grid-cols-[48px,322px] bg-white">
       <NavSideBar name={user.username} />
 
       <div className="w-full">
