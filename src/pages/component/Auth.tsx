@@ -76,7 +76,7 @@ const Auth = ({ action }: { action: ActionType }) => {
                         dispatch(setUserName(values.username));
                         message.success('Login successful');
                         setTimeout(() => {
-                            window.location.href = '/';
+                            navigate("/")
                         }, 200);
                         break;
                     case 'REGISTER':
