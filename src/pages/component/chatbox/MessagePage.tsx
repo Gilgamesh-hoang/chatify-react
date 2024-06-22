@@ -213,7 +213,7 @@ const MessagePage = () => {
       webSocket.send(JSON.stringify(GET_MESSAGES));
       interval = setInterval(() => {
         webSocket.send(JSON.stringify(CHECK_USER_STATUS));
-      }, 1000);
+      }, 5000);
     }
     return () => {
       //clean up on detach

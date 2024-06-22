@@ -23,41 +23,48 @@ const Sidebar = () => {
   const socket = useSelector(socketSelector);
   const statusSocket = useSelector(socketStatusSelector);
   const dispatch = useDispatch<AppDispatch>();
-  const getUserParams: SocketEvent = {
-    action: 'onchat',
-    data: {
-      event: 'GET_USER_LIST',
-    },
-  };
-
-  useEffect(() => {
+  const handleFetchUserList = () => {
     if (socket && statusSocket === 'open' && userName) {
-      socket.onmessage = (event: MessageEvent) => {
-        const data = JSON.parse(event.data);
-        // I wanted to reload sidebar item, but it's glitching so not yet
-        // if (data.event === 'SEND_CHAT' && data.status === 'success')
-        //   socket.send(JSON.stringify(getUserParams))
-        // else
-        if (data.event === 'GET_USER_LIST' && data.status === 'success') {
-          const conversationUserData = data.data.filter((conv: any) => {
-            if (conv.name != userName) {
-              let sideBarProp: SideBarProp = {
-                type: conv.type,
-                name: conv.name,
-                unseen: false,
-                actionTime: new Date(),
-              };
-              return sideBarProp;
-            }
-            return null;
-          });
-          console.log('conversationUserData', conversationUserData);
-          setAllUsers(conversationUserData);
-        }
+      const getUserParams: SocketEvent = {
+        action: 'onchat',
+        data: {
+          event: 'GET_USER_LIST',
+        },
       };
-      // socket.send(JSON.stringify(getUserParams))
-      dispatch(socketSendMessage(getUserParams));
+      socket.send(JSON.stringify(getUserParams));
     }
+  };
+  const handleReviceUserList = (event: MessageEvent) => {
+    const data = JSON.parse(event.data);
+    // I wanted to reload sidebar item, but it's glitching so not yet
+    // if (data.event === 'SEND_CHAT' && data.status === 'success')
+    //   socket.send(JSON.stringify(getUserParams))
+    // else
+    if (data.event === 'GET_USER_LIST' && data.status === 'success') {
+      const conversationUserData = data.data.filter((conv: any) => {
+        if (conv.name != userName) {
+          let sideBarProp: SideBarProp = {
+            type: conv.type,
+            name: conv.name,
+            unseen: false,
+            actionTime: new Date(),
+          };
+          return sideBarProp;
+        }
+        return null;
+      });
+      console.log('conversationUserData', conversationUserData);
+      setAllUsers(conversationUserData);
+    }
+  };
+  useEffect(() => {
+    socket.addEventListener('message', handleReviceUserList);
+    return () => {
+      socket.removeEventListener('message', handleReviceUserList);
+    };
+  });
+  useEffect(() => {
+    handleFetchUserList();
   }, [socket, userName, statusSocket]);
 
   return (
