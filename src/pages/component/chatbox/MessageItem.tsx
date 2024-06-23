@@ -43,14 +43,15 @@ const MessageItem: React.FC<MessageItemProps> = ({ msg, username, type }) => {
   ); //True time
   const fromAsciiMessage = fromAscii(msg.mes);
   const renderMessageContent = (mes: string) => {
-    if (isValidURL(mes)) {
-      const cloudinaryURL: FileType | null = isCloudinaryURL(mes);
+    const msg = languageUtil.base64ToUtf8(mes);
+    if (isValidURL(msg)) {
+      const cloudinaryURL: FileType | null = isCloudinaryURL(msg);
       if (cloudinaryURL) {
         if (cloudinaryURL.isImage) {
           return (
             <Tippy
               placement="right-start"
-              content={<FileDownload url={mes} />}
+              content={<FileDownload url={msg} />}
               interactive={true}
               delay={[200, 100]}
               animation={'shift-away'}
@@ -58,9 +59,9 @@ const MessageItem: React.FC<MessageItemProps> = ({ msg, username, type }) => {
               disabled={isImageError}
             >
               <img
-                src={mes}
+                src={msg}
                 className="w-auto h-full max-h-[260px] sm:max-h-[300px] md:max-h-[280px] object-scale-down"
-                alt={mes}
+                alt={msg}
                 onError={(e) => {
                   (e.target as HTMLImageElement).src = imageError;
                   setImageError(true);
@@ -71,7 +72,7 @@ const MessageItem: React.FC<MessageItemProps> = ({ msg, username, type }) => {
         } else if (cloudinaryURL.isVideo) {
           return (
             <video
-              src={mes}
+              src={msg}
               controls
               className="w-auto h-full max-h-[260px] sm:max-h-[300px] md:max-h-[280px] object-scale-down"
             />
@@ -80,19 +81,17 @@ const MessageItem: React.FC<MessageItemProps> = ({ msg, username, type }) => {
       } else {
         return (
           <a
-            href={mes}
+            href={msg}
             target="_blank"
             rel="noreferrer"
             className={'px-2 break-words text-blue-500 underline'}
           >
-            {mes}
+            {msg}
           </a>
         );
       }
     } else {
-      return (
-        <p className={'px-2 break-words'}>{languageUtil.base64ToUtf8(mes)}</p>
-      );
+      return <p className={'px-2 break-words'}>{msg}</p>;
     }
   };
   //for case group

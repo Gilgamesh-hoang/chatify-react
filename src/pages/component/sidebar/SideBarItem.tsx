@@ -230,8 +230,9 @@ const SideBarItem: React.FC<SideBarProp> = (props) => {
   };
 
   const renderLastMess = (lastMessage: LastMessage) => {
-    const isURL = isValidURL(lastMessage.mes);
-    const cloudinaryURL = isURL ? isCloudinaryURL(lastMessage.mes) : null;
+    const mes = languageUtil.base64ToUtf8(lastMessage.mes);
+    const isURL = isValidURL(mes);
+    const cloudinaryURL = isURL ? isCloudinaryURL(mes) : null;
     const isImage = cloudinaryURL?.isImage;
     const isVideo = cloudinaryURL?.isVideo;
     const sender =
@@ -245,8 +246,8 @@ const SideBarItem: React.FC<SideBarProp> = (props) => {
         ? 'Send image '
         : isVideo
         ? 'Send video '
-        : lastMessage.mes
-      : fromAscii(languageUtil.base64ToUtf8(lastMessage.mes));
+        : mes
+      : fromAscii(mes);
 
     return (
       <p
