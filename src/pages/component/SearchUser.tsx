@@ -80,7 +80,7 @@ const SearchUser = ({ onClose }: { onClose: () => void }) => {
         <div className="bg-white rounded h-14 overflow-hidden flex ">
           <input
             type="text"
-            placeholder="Search user by name, email...."
+            placeholder="Search user by name"
             className="w-full outline-none py-1 h-full px-4"
             onChange={(e) => setSearch(e.target.value)}
             value={search}
