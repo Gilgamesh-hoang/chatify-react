@@ -210,10 +210,12 @@ const MessagePage = () => {
     webSocket.addEventListener('message', handleGetMessage);
     webSocket.addEventListener('message', handleReceivedNewMessage);
     if (webSocket) {
-      webSocket.send(JSON.stringify(GET_MESSAGES));
+      if (webSocket.readyState === WebSocket.OPEN)
+        webSocket.send(JSON.stringify(GET_MESSAGES));
       interval = setInterval(() => {
-        webSocket.send(JSON.stringify(CHECK_USER_STATUS));
-      }, 5000);
+        if (webSocket.readyState === WebSocket.OPEN)
+          webSocket.send(JSON.stringify(CHECK_USER_STATUS));
+      }, 1000);
     }
     return () => {
       //clean up on detach
@@ -259,72 +261,59 @@ const MessagePage = () => {
         },
       },
     });
+    // Function used to send the message (used for both plaintext and image/video)
+    const sendMessageFunction = (message: string) => {
+      const SEND_MESSAGE: SocketEvent = createSocketEvent(message);
+      //just in case socket is not in open state, don't send
+      if (webSocket.readyState === WebSocket.OPEN)
+        webSocket.send(JSON.stringify(SEND_MESSAGE));
+
+      // Add a fake message to reduce call to update chat, minus the timezone because server use gmt-0
+      const messageSent: Message = {
+        type: currentChat.type,
+        name: user.username,
+        to: currentChat.name,
+        mes: message,
+        createAt: new Date(Date.now() - 7 * 3600 * 1000),
+      };
+      setAllMessage((prev) => [messageSent].concat(prev));
+      // Dispatch a custom event specifically for send_chat, to update the side bar item on socket
+      webSocket.dispatchEvent(new MessageEvent('message', {
+        //where data stored in here is name of the chat
+        data: JSON.stringify({
+          'event': 'SEND_CHAT_SUCCESS',
+          'status': 'success',
+          'data': messageSent,
+        }),
+      }));
+    }
     // If there is an input value or a selected file and the WebSocket is connected
     if ((inputValue || selectedFile) && webSocket) {
       if (selectedFile) {
         // Upload the file and get the URL
         const url = await handleUploadFile();
         if (url) {
-          const SEND_FILE: SocketEvent = createSocketEvent(url);
-          //just in case socket is not in open state, don't send
-          if (webSocket.readyState === WebSocket.OPEN)
-            webSocket.send(JSON.stringify(SEND_FILE));
-
-          // Add a fake message to reduce call to update chat, minus the timezone because server use gmt-0
-          // It used to works with normal text only, but file + text is broken.
-          const messageSent: Message = {
-            type: currentChat.type,
-            name: user.username,
-            to: currentChat.name,
-            mes: url,
-            createAt: new Date(Date.now() - 7 * 3600 * 1000),
-          };
-          setAllMessage((prev) => [messageSent].concat(prev));
-          // Dispatch a custom event specifically for send_chat, to update the side bar item on socket
-          webSocket.dispatchEvent(
-            new MessageEvent('message', {
-              //where data stored in here is name of the chat
-              data: JSON.stringify({
-                event: 'SEND_CHAT_SUCCESS',
-                status: 'success',
-                data: messageSent,
-              }),
-            })
-          );
+          // IF there's text to send
+          if (inputValue) {
+            // ...first clear the input field
+            inputRef.current && (inputRef.current.value = '');
+            // ...Send the message first
+            sendMessageFunction(inputValue);
+            // ...Then send the URL with a delay of 600 millisecond
+            setTimeout(() => {
+              sendMessageFunction(url);
+            }, 600);
+          }
+          // ...else just send that url
+          else sendMessageFunction(url);
         }
       }
-      if (inputValue) {
-        // Send a socket event with the input value (converted one to ascii)
-        const SEND_MESSAGES: SocketEvent = createSocketEvent(
-          toAscii(inputValue)
-        );
-        // just in case socket is not in open state, don't send
-        if (webSocket.readyState === WebSocket.OPEN)
-          webSocket.send(JSON.stringify(SEND_MESSAGES));
+      // If there's only text, the message is sent with no delay
+      else if (inputValue) {
         // Clear the input field
         inputRef.current && (inputRef.current.value = '');
-
-        // Add a fake message to reduce call to update chat, minus the timezone because server use gmt-0
-        // It used to works with normal text only, but file + text is broken.
-        const messageSent: Message = {
-          type: currentChat.type,
-          name: user.username,
-          to: currentChat.name,
-          mes: toAscii(inputValue),
-          createAt: new Date(Date.now() - 7 * 3600 * 1000),
-        };
-        setAllMessage((prev) => [messageSent].concat(prev));
-        // Dispatch a custom event specifically for send_chat, to update the side bar item on socket
-        webSocket.dispatchEvent(
-          new MessageEvent('message', {
-            //where data stored in here is name of the chat
-            data: JSON.stringify({
-              event: 'SEND_CHAT_SUCCESS',
-              status: 'success',
-              data: messageSent,
-            }),
-          })
-        );
+        // Then send it
+        sendMessageFunction(inputValue);
       }
 
       // Then scroll to end when message was sent
@@ -351,7 +340,8 @@ const MessagePage = () => {
         },
       },
     };
-    webSocket.send(JSON.stringify(GET_MESSAGE_FOR_NEW_PAGES));
+    if (webSocket.readyState === WebSocket.OPEN)
+      webSocket.send(JSON.stringify(GET_MESSAGE_FOR_NEW_PAGES));
     if (currentMessage.current) {
       currentMessage.current.scrollIntoView({ block: 'start' });
     }
