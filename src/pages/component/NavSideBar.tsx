@@ -13,7 +13,7 @@ interface NavSideBarProps {
 const NavSideBar : React.FC<NavSideBarProps> = ({name}) => {
     const handleLogout = () => {
         localStorage.clear();
-        window.location.reload();
+        window.location.href = '/login';
     }
     return (
         <div
