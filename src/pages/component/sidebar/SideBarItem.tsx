@@ -110,19 +110,22 @@ const SideBarItem: React.FC<SideBarProp> = (props) => {
         });
         handleSeen()
       }
-      else if (response.event === 'SEND_CHAT' && response.data.name === props.name && response.data.to === user.username) {
+      else if (response.event === 'SEND_CHAT') {
         console.log("RECEIVED "+ JSON.stringify(response.data))
-        // Update the `lastMessage` state. taken from Date.now() so need to minus timezone
-        setLastMessage({
-          ...messageData,
-          createAt: new Date(Date.now() - 7 * 3600 * 1000),
-        });
-        // Check if the message is for the current user and it's unseen.
-        if (messageData.to === userName && !unseenRef.current && messageData.name === name) {
-          // Mark the message as seen.
-          unseenRef.current = true;
-          // Update the unseen status in localStorage.
-          localStorage.setItem(`unseen_${props.name}`, JSON.stringify(true));
+        //if it's a room chat message, then redirect it using the 'to' otherwise check for 'name'
+        if ((messageData.type === 1 && messageData.to === props.name) || (messageData.type === 0 && messageData.name === props.name)) {
+          // Update the `lastMessage` state. taken from Date.now() so need to minus timezone
+          setLastMessage({
+            ...messageData,
+            createAt: new Date(Date.now() - 7 * 3600 * 1000),
+          });
+          // Check if the message is for the current user and it's unseen.
+          if (messageData.to === userName && !unseenRef.current) {
+            // Mark the message as seen.
+            unseenRef.current = true;
+            // Update the unseen status in localStorage.
+            localStorage.setItem(`unseen_${props.name}`, JSON.stringify(true));
+          }
         }
       }
     } else if (response.status === 'error') {
@@ -140,7 +143,8 @@ const SideBarItem: React.FC<SideBarProp> = (props) => {
       socket.addEventListener('message', handleNewMessage);
       // Create timeout to retrieve new message
       timeout = setTimeout(() => {
-        socket.send(JSON.stringify(getMessParams));
+        if (socket.readyState === WebSocket.OPEN)
+          socket.send(JSON.stringify(getMessParams));
       }, 1000);
     }
     // Remove the 'message' event listener when the component unmounts.
@@ -193,7 +197,7 @@ const SideBarItem: React.FC<SideBarProp> = (props) => {
     const cloudinaryURL = isURL ? isCloudinaryURL(lastMessage.mes) : null;
     const isImage = cloudinaryURL?.isImage;
     const isVideo = cloudinaryURL?.isVideo;
-    const sender = lastMessage.name === userName ? 'You: ' : '';
+    const sender = lastMessage.name === userName ? 'You: ' : (lastMessage.type === 1 ? `${lastMessage.name}: ` : '');
     const message = isURL ? (isImage ? 'Send image ' : isVideo ? 'Send video ' : lastMessage.mes) : fromAscii(lastMessage.mes);
 
     return (
