@@ -13,6 +13,7 @@ import { message } from 'antd';
 import { UserSideBar } from './SearchUser';
 import clsx from 'clsx';
 import { useNavigate } from 'react-router';
+import languageUtil from '~/utils/languageUtil';
 const addUserSchema = yup.object({
   name: yup.string().required('Name is required'),
   msg: yup.string().required('Message is required'),
@@ -45,7 +46,7 @@ const AddUser = ({ onClose }: { onClose: () => void }) => {
           data: {
             type: 'people',
             to: values.name,
-            mes: values.msg,
+            mes: languageUtil.utf8ToBase64(values.msg),
           },
         },
       };
