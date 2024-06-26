@@ -36,11 +36,11 @@ export const socketSlice = createSlice({
       console.log('disconnected');
     },
     socketSendMessage: (state, action: PayloadAction<SocketEvent>) => {
-      if (state.statusSocket == 'open') {
-        console.log('send message ', action.payload);
-        state.statusSocket = 'sending';
-        state.socket?.send(JSON.stringify(action.payload));
-      }
+      // if (state.statusSocket == 'open') {
+      console.log('send message ', action.payload);
+      state.statusSocket = 'sending';
+      state.socket?.send(JSON.stringify(action.payload));
+      // }
     },
     socketReceivedMessage: (state) => {
       state.statusSocket = 'open';

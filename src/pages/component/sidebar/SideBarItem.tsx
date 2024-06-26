@@ -15,6 +15,7 @@ import { AppDispatch } from '~/redux/store';
 import { setMessageListToChat, setChatDataUserOnline } from '~/redux/chatDataSlice';
 import moment from 'moment';
 
+import languageUtil from '~/utils/languageUtil';
 
 interface LastMessage {
   mes: string;
@@ -41,9 +42,11 @@ const SideBarItem: React.FC<SideBarProp> = (props) => {
 
   // const [unseen, setUnseen] = useState<boolean>(unseenRef.current);
   useEffect(() => {
-    localStorage.setItem(`unseen_${props.name}`, JSON.stringify(unseenRef.current));
+    localStorage.setItem(
+      `unseen_${props.name}`,
+      JSON.stringify(unseenRef.current)
+    );
   }, [unseenRef.current]);
-
 
   //boolean to stop stack tracing too much
   const getMessParams: SocketEvent = {
@@ -157,16 +160,32 @@ const SideBarItem: React.FC<SideBarProp> = (props) => {
   };
 
   const renderLastMess = (lastMessage: LastMessage) => {
-    const isURL = isValidURL(lastMessage.mes);
-    const cloudinaryURL = isURL ? isCloudinaryURL(lastMessage.mes) : null;
+    const mes = languageUtil.base64ToUtf8(lastMessage.mes);
+    const isURL = isValidURL(mes);
+    const cloudinaryURL = isURL ? isCloudinaryURL(mes) : null;
     const isImage = cloudinaryURL?.isImage;
     const isVideo = cloudinaryURL?.isVideo;
-    const sender = lastMessage.name === userName ? 'You: ' : (lastMessage.type === 1 ? `${lastMessage.name}: ` : '');
-    const message = isURL ? (isImage ? 'Send image ' : isVideo ? 'Send video ' : lastMessage.mes) : fromAscii(lastMessage.mes);
+    const sender =
+      lastMessage.name === userName
+        ? 'You: '
+        : lastMessage.type === 1
+        ? `${lastMessage.name}: `
+        : '';
+    const message = isURL
+      ? isImage
+        ? 'Send image '
+        : isVideo
+        ? 'Send video '
+        : mes
+      : fromAscii(mes);
 
     return (
       <p
-        className={clsx('overflow-hidden text-ellipsis whitespace-nowrap text-gray-950', { 'font-bold': unseenRef.current })}>
+        className={clsx(
+          'overflow-hidden text-ellipsis whitespace-nowrap text-gray-950',
+          { 'font-bold': unseenRef.current }
+        )}
+      >
         <span>{sender + message}</span>
         {isImage && <CiImageOn className="ml-1 size-4 inline" />}
         {isVideo && <CiVideoOn className="ml-1 size-4 inline" />}
@@ -177,23 +196,25 @@ const SideBarItem: React.FC<SideBarProp> = (props) => {
   return (
     <>
       <Toaster position={'top-center'} />
-      <NavLink to={`/${props.type}/${props.name}`} key={props.name}
-               onClick={handleSeen}
-               className=
-                 {clsx('flex items-center gap-2 py-3 px-2 border border-transparent hover:border-primary rounded hover:bg-slate-100 cursor-pointer',
-                   props.name == name ? 'bg-slate-200 ' : '')}>
+      <NavLink
+        to={`/${props.type}/${props.name}`}
+        key={props.name}
+        onClick={handleSeen}
+        className={clsx(
+          'flex items-center gap-2 py-3 px-2 border border-transparent hover:border-primary rounded hover:bg-slate-100 cursor-pointer',
+          props.name == name ? 'bg-slate-200 ' : ''
+        )}
+      >
         <div>
-          <Avatar
-            type={props.type}
-            width={40}
-            height={40}
-            name={props.name}
-          />
+          <Avatar type={props.type} width={40} height={40} name={props.name} />
         </div>
         <div className={'lg:max-w-[200px]'}>
-          <h3 className={clsx('text-ellipsis line-clamp-1 text-base whitespace-nowrap',
-            { 'font-normal': !unseenRef.current },
-            { 'font-bold': unseenRef.current })}
+          <h3
+            className={clsx(
+              'text-ellipsis line-clamp-1 text-base whitespace-nowrap',
+              { 'font-normal': !unseenRef.current },
+              { 'font-bold': unseenRef.current }
+            )}
           >
             {props.name}
           </h3>
@@ -203,15 +224,13 @@ const SideBarItem: React.FC<SideBarProp> = (props) => {
               chatInfo && chatInfo.messages.length > 0 && renderLastMess({ ...chatInfo.messages[0] })
             }
           </div>
-
         </div>
-
 
         <div className="flex flex-col ml-auto">
           <p className="text-xs mb-1.5 font-normal w-max text-right" ref={timeRef}>
           </p>
           <span className={clsx('w-2 h-2 flex justify-center items-center ml-auto bg-red-600 rounded-full ',
-            { 'invisible': !unseenRef.current })}></span>
+            { invisible: !unseenRef.current })}></span>
         </div>
       </NavLink>
     </>

@@ -19,6 +19,7 @@ import FilePreview from '~/component/FilePreview';
 import MessageItem, { toAscii } from '~/pages/component/chatbox/MessageItem';
 import EmojiPicker from '~/component/EmojiPicker';
 import { appendMessageListToChat, Message, setChatDataUserOnline, setUpdateNewMessage } from '~/redux/chatDataSlice';
+import languageUtil from '~/utils/languageUtil';
 
 interface FileUploadProps {
   isImage: boolean;
@@ -39,17 +40,28 @@ const MessagePage = () => {
 
   const [loading, setLoading] = useState(false);
   const currentMessage = useRef<null | HTMLDivElement>(null);
-  const [selectedFile, setSelectedFile] = useState<FileUploadProps | null>(null);
+  const [selectedFile, setSelectedFile] = useState<FileUploadProps | null>(
+    null
+  );
   const inputRef = useRef<HTMLInputElement>(null);
   const submitRef = useRef<HTMLButtonElement>(null);
 
+  const CHECK_USER_STATUS: SocketEvent = {
+    action: 'onchat',
+    data: {
+      event: 'CHECK_USER',
+      data: {
+        user: currentChat.name,
+      },
+    },
+  };
   const GET_MESSAGES: SocketEvent = {
-    'action': 'onchat',
-    'data': {
-      'event': currentChat.type === 1 ? 'GET_ROOM_CHAT_MES' : 'GET_PEOPLE_CHAT_MES',
-      'data': {
-        'name': currentChat.name,
-        'page': 1,
+    action: 'onchat',
+    data: {
+      event: currentChat.type === 1 ? 'GET_ROOM_CHAT_MES' : 'GET_PEOPLE_CHAT_MES',
+      data: {
+        name: currentChat.name,
+        page: 1,
       },
     },
   };
@@ -86,13 +98,18 @@ const MessagePage = () => {
     const inputValue = inputRef.current?.value.trim();
 
     const createSocketEvent = (message: string): SocketEvent => ({
-      'action': 'onchat',
-      'data': {
-        'event': 'SEND_CHAT',
-        'data': {
-          'type': currentChat.type === 0 ? 'people' : (currentChat.type === 1 ? 'room' : ''),
-          'to': currentChat.name,
-          'mes': message,
+      action: 'onchat',
+      data: {
+        event: 'SEND_CHAT',
+        data: {
+          type:
+            currentChat.type === 0
+              ? 'people'
+              : currentChat.type === 1
+              ? 'room'
+              : '',
+          to: currentChat.name,
+          mes: languageUtil.utf8ToBase64(message),
         },
       },
     });
@@ -142,8 +159,14 @@ const MessagePage = () => {
         sendMessageFunction(inputValue);
       }
 
+      // Then scroll to end when message was sent
+      if (currentMessage.current) {
+        currentMessage.current.scrollIntoView({
+          behavior: 'smooth',
+          block: 'end',
+        });
+      }
     }
-
   };
 
   const loadMoreMessage = () => {
@@ -166,12 +189,12 @@ const MessagePage = () => {
       webSocket.removeEventListener('message', handleLoadMoreMessages);
     }
     const GET_MESSAGE_FOR_NEW_PAGES = {
-      'action': 'onchat',
-      'data': {
-        'event': currentChat.type === 1 ? 'GET_ROOM_CHAT_MES' : 'GET_PEOPLE_CHAT_MES',
-        'data': {
-          'name': currentChat.name,
-          'page': chatInfo.page + 1 + chatInfo.offset / 50,
+      action: 'onchat',
+      data: {
+        event: currentChat.type === 1 ? 'GET_ROOM_CHAT_MES' : 'GET_PEOPLE_CHAT_MES',
+        data: {
+          name: currentChat.name,
+          page: chatInfo.page + 1 + chatInfo.offset / 50,
         },
       },
     };
@@ -223,11 +246,12 @@ const MessagePage = () => {
 
   return (
     <>
-      <Toaster
-        position="top-center"
-        reverseOrder={false}
-      />
-      <div style={{ backgroundImage: `url(${backgroundImage})` }} className="bg-no-repeat bg-cover" key={name}>
+      <Toaster position="top-center" reverseOrder={false} />
+      <div
+        style={{ backgroundImage: `url(${backgroundImage})` }}
+        className="bg-no-repeat bg-cover"
+        key={name}
+      >
         <header className="sticky top-0 h-16 bg-white flex justify-between items-center px-4">
           <div className="flex items-center gap-4">
             <Link to={'/'} className="lg:hidden">
@@ -243,12 +267,14 @@ const MessagePage = () => {
               />
             </div>
             <div>
-              <h3 className="font-semibold text-lg my-0 text-ellipsis line-clamp-1">{currentChat.name}</h3>
+              <h3 className="font-semibold text-lg my-0 text-ellipsis line-clamp-1">
+                {currentChat.name}
+              </h3>
               <p className="-my-2 text-sm">
                 {
-                  (chatInfo && chatInfo.online) ? <span className="text-primary">online</span> :
-                    <span className="text-slate-400">offline</span>
-                }
+                  (chatInfo && chatInfo.online) ? <span className="text-primary">online</span> : (
+                  <span className="text-slate-400">offline</span>
+                )}
               </p>
             </div>
           </div>
@@ -261,9 +287,7 @@ const MessagePage = () => {
         </header>
 
         {/***show all messages */}
-        <section
-          className="h-[calc(100vh-128px)] overflow-x-hidden overflow-y-scroll scrollbar relative bg-slate-200 bg-opacity-50">
-
+        <section className="h-[calc(100vh-128px)] overflow-x-hidden overflow-y-scroll scrollbar relative bg-slate-200 bg-opacity-50">
           {/**all messages show here, note: it's in reverse order aka the elements are place upward */}
           <div className="flex flex-col-reverse gap-2 py-2 mx-2 " ref={currentMessage}>
             {
@@ -280,22 +304,23 @@ const MessagePage = () => {
             }
           </div>
 
-
           {/**upload Image display */}
-          {selectedFile && <FilePreview selectedFile={selectedFile} setSelectedFile={setSelectedFile} />}
+          {selectedFile && (
+            <FilePreview
+              selectedFile={selectedFile}
+              setSelectedFile={setSelectedFile}
+            />
+          )}
 
-          {
-            loading && (
-              <div className="w-full h-full flex sticky bottom-0 justify-center items-center">
-                <Loading />
-              </div>
-            )
-          }
+          {loading && (
+            <div className="w-full h-full flex sticky bottom-0 justify-center items-center">
+              <Loading />
+            </div>
+          )}
         </section>
 
         {/**send a message */}
         <section className="h-16 bg-white flex items-center px-4">
-
           {/*show file upload*/}
           <FileUpload setSelectedFile={setSelectedFile} />
 
@@ -303,18 +328,24 @@ const MessagePage = () => {
           <EmojiPicker inputRef={inputRef} />
 
           {/**input box */}
-          <form className="h-full w-full flex gap-2" onSubmit={handleSendMessage}>
+          <form
+            className="h-full w-full flex gap-2"
+            onSubmit={handleSendMessage}
+          >
             <input
               type="text"
               placeholder="Type here message..."
               className="py-1 px-4 outline-none w-full h-full"
               ref={inputRef}
             />
-            <button type="submit" className="text-primary hover:text-secondary" ref={submitRef}>
+            <button
+              type="submit"
+              className="text-primary hover:text-secondary"
+              ref={submitRef}
+            >
               <IoMdSend size={28} />
             </button>
           </form>
-
         </section>
       </div>
     </>
