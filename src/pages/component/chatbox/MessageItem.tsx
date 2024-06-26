@@ -23,7 +23,7 @@ export const toAscii = (text: string) => {
     result = result.concat(
       text.charCodeAt(i) > 255
         ? '&#' + String(text.charCodeAt(i)) + ';'
-        : text.charAt(i)
+        : text.charAt(i),
     );
   return result;
 };
@@ -39,7 +39,7 @@ const MessageItem: React.FC<MessageItemProps> = ({ msg, username, type }) => {
   const [isImageError, setImageError] = useState(false);
   const TIMEZONE_OFFSET = 7 * 3600 * 1000; //GMT+7
   const realCreateAt = new Date(
-    new Date(msg.createAt).getTime() + TIMEZONE_OFFSET
+    new Date(msg.createAt).getTime() + TIMEZONE_OFFSET,
   ); //True time
   const fromAsciiMessage = fromAscii(msg.mes);
   const renderMessageContent = (mes: string) => {

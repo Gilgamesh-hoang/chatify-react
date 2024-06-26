@@ -74,6 +74,21 @@ const chatDataSlice = createSlice({
         page: 1
       })
     },
+    // update a chat data room
+    updateChatDataRooms: (state, action: PayloadAction<{ name:string, roomData: RoomChat }>) => {// first, find the user with the name
+      const index = state.userList.findIndex((user) => user.name === action.payload.name);
+      // if founded
+      if (index >= 0) {
+        state.userList[index] = {
+          ...state.userList[index],
+          room_owner: action.payload.roomData.own,
+          room_member: action.payload.roomData.userList,
+        }
+      }
+      else {
+        alert('Can\'t find the user list while status to list');
+      }
+    },
     // set online user
     setChatDataUserOnline: (state, action: PayloadAction<{ name: string, online: boolean }>) => {
       // first, find the user with the name
@@ -98,9 +113,6 @@ const chatDataSlice = createSlice({
         state.userList[index].messages = action.payload.messages;
         state.userList[index].moreMessage = action.payload.messages.length >= 50;
         state.userList[index].offset = 0;
-        if (state.userList[index].type === 1) {
-
-        }
       } else {
         alert('Can\'t find the user list while add messages to list');
       }
@@ -158,6 +170,7 @@ export const {
   setMessageListToChat,
   setUpdateNewMessage,
   appendMessageListToChat,
+  updateChatDataRooms,
 } = chatDataSlice.actions;
 
 export default chatDataSlice.reducer;

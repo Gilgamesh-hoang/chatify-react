@@ -12,7 +12,7 @@ import { isCloudinaryURL, isValidURL } from '~/utils/linkUtil';
 import { CiImageOn, CiVideoOn } from 'react-icons/ci';
 import { fromAscii } from '~/pages/component/chatbox/MessageItem';
 import { AppDispatch } from '~/redux/store';
-import { setMessageListToChat, setChatDataUserOnline } from '~/redux/chatDataSlice';
+import { setMessageListToChat, setChatDataUserOnline, updateChatDataRooms } from '~/redux/chatDataSlice';
 import moment from 'moment';
 
 import languageUtil from '~/utils/languageUtil';
@@ -75,6 +75,11 @@ const SideBarItem: React.FC<SideBarProp> = (props) => {
       // Check if there are any messages.
       if (filteredMessages.length > 0) {
         dispatch(setMessageListToChat({ name: props.name, messages: filteredMessages }));
+        if (props.type === 1) {
+          const roomUserList:string[] = [];
+          data.data.userList.forEach((user: { name: string; }) => roomUserList.push(user.name));
+          dispatch(updateChatDataRooms({ name: props.name, roomData: { ...data.data, userList: roomUserList } }));
+        }
 
         // Check if the message is for the current user and it's unseen.
         if (filteredMessages[0].to === userName && !unseenRef.current) {
