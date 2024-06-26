@@ -47,6 +47,8 @@ const Sidebar = () => {
                 messages: [],
                 online: false,
                 profile_pic: '',
+                moreMessage: false,
+                offset: 0,
                 page: 1,
               };
               conversationUserData.push(sideBarProp);

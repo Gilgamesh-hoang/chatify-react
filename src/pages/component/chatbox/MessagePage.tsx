@@ -18,7 +18,7 @@ import FileUpload from '~/component/FileUpload';
 import FilePreview from '~/component/FilePreview';
 import MessageItem, { toAscii } from '~/pages/component/chatbox/MessageItem';
 import EmojiPicker from '~/component/EmojiPicker';
-import { Message, setChatDataUserOnline, setUpdateNewMessage } from '~/redux/chatDataSlice';
+import { appendMessageListToChat, Message, setChatDataUserOnline, setUpdateNewMessage } from '~/redux/chatDataSlice';
 
 interface FileUploadProps {
   isImage: boolean;
@@ -42,11 +42,6 @@ const MessagePage = () => {
   const [selectedFile, setSelectedFile] = useState<FileUploadProps | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const submitRef = useRef<HTMLButtonElement>(null);
-  //more message button
-  const [moreMessage, setMoreMessage] = useState<boolean>(false);
-  //track current page
-  const pageTracks = useRef<number>(1);
-  const sentNumber = useRef(0);
 
   const GET_MESSAGES: SocketEvent = {
     'action': 'onchat',
@@ -70,99 +65,6 @@ const MessagePage = () => {
       currentMessage.current.scrollIntoView({ behavior: 'smooth', block: 'end' });
     }
   }, [chatInfo?.messages]);
-
-  //set user status triggers on socket or currentChat changed state
-  // useEffect(() => {
-  //   //handle the online status
-  //   const handleStatusCheck = (evt: MessageEvent) => {
-  //     const response = JSON.parse(evt.data);
-  //     if (!(response.event === 'CHECK_USER')) return;
-  //     if (response.status === 'success') {
-  //       setUserOnline((prev) => {
-  //         return prev === response.data.status ? prev : response.data.status;
-  //       });
-  //     } else if (response.status === 'error') {
-  //       toast.error('Error when get status of '.concat(name || 'unknown'), { duration: 2000 });
-  //     }
-  //   };
-  //   //handle the get_message
-  //   const handleGetMessage = (evt: MessageEvent) => {
-  //     const response = JSON.parse(evt.data);
-  //     if (!(response.event === 'GET_PEOPLE_CHAT_MES' || response.event === 'GET_ROOM_CHAT_MES')) return;
-  //     if (response.status === 'success') {
-  //       //get message data
-  //       const messageData: Message[] = response.event === 'GET_ROOM_CHAT_MES' ? response.data.chatData : response.data;
-  //       //filter it to get the desired chat for user/group
-  //       const filteredMessages = messageData.filter((message: Message) => (response.event !== 'GET_ROOM_CHAT_MES' && message.name === currentChat.name) || message.to === currentChat.name);
-  //       //and set the preferred chat to the screen
-  //       if (filteredMessages.length > 0) {
-  //         //on page 1 do normally
-  //         if (pageTracks.current === 1) {
-  //           setAllMessage(filteredMessages);
-  //           //message scroll to end
-  //           currentMessage.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
-  //         }
-  //         //on ther page tho, append with new data
-  //         else {
-  //           setAllMessage((prev) => {
-  //             console.log(prev, filteredMessages)
-  //             if (prev[prev.length - 1].createAt < filteredMessages[0].createAt)
-  //               return prev;
-  //             return prev.concat(filteredMessages);
-  //           });
-  //         }
-  //         setMoreMessage(filteredMessages.length >= 50);
-  //       }
-  //     } else if (response.status === 'error') {
-  //       toast.error('Error when get chat message of '.concat(name || 'unknown'), { duration: 2000 });
-  //     }
-  //   };
-  //   //handle the success send_chat (aka receiving new message)
-  //   const handleReceivedNewMessage = (evt: MessageEvent) => {
-  //     const response = JSON.parse(evt.data);
-  //     if (!(response.event === 'SEND_CHAT' || response.event === 'SEND_CHAT_COMPLETE')) return;
-  //     //call get message to update
-  //     if (response.status === 'success') {
-  //       if (response.event === 'SEND_CHAT_COMPLETE' && response.data.to === currentChat.name) {
-  //         setAllMessage((prev) => [{
-  //           ...response.data,
-  //           createAt: new Date(response.data.createAt),
-  //         }].concat(prev));
-  //       } else if (response.event === 'SEND_CHAT') {
-  //         setAllMessage((prev) => [{
-  //           ...response.data,
-  //           createAt: new Date(Date.now() - 7 * 3600 * 1000),
-  //         },
-  //         ].concat(prev));
-  //       }
-  //       //only when get new message, should the message scroll to end
-  //       currentMessage.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
-  //     } else if (response.status === 'error') {
-  //       toast.error('Error when get chat message of '.concat(name || 'unknown'), { duration: 2000 });
-  //     }
-  //   };
-  //
-  //   let interval: NodeJS.Timer;
-  //   webSocket.addEventListener('message', handleStatusCheck);
-  //   webSocket.addEventListener('message', handleGetMessage);
-  //   webSocket.addEventListener('message', handleReceivedNewMessage);
-  //   if (webSocket) {
-  //     if (webSocket.readyState === WebSocket.OPEN)
-  //       webSocket.send(JSON.stringify(GET_MESSAGES));
-  //     interval = setInterval(() => {
-  //       if (webSocket.readyState === WebSocket.OPEN)
-  //         webSocket.send(JSON.stringify(CHECK_USER_STATUS));
-  //     }, 1000);
-  //   }
-  //   return () => {
-  //     //clean up on detach
-  //     webSocket.removeEventListener('message', handleStatusCheck);
-  //     webSocket.removeEventListener('message', handleGetMessage);
-  //     webSocket.removeEventListener('message', handleReceivedNewMessage);
-  //     clearInterval(interval);
-  //   };
-  // }, [webSocket, currentChat, name]);
-
 
   const handleUploadFile = async (): Promise<string | null> => {
     if (selectedFile) {
@@ -245,18 +147,35 @@ const MessagePage = () => {
   };
 
   const loadMoreMessage = () => {
-    if (!moreMessage) return;
-    pageTracks.current++;
+    if (!chatInfo?.moreMessage) return;
+    const handleLoadMoreMessages = (evt:MessageEvent) => {
+      const response = JSON.parse(evt.data);
+      if (!(response.event === 'GET_PEOPLE_CHAT_MES' || response.event === 'GET_ROOM_CHAT_MES')) return;
+      if (response.status === 'success') {
+        //get message data
+        const messageData: Message[] = response.event === 'GET_ROOM_CHAT_MES' ? response.data.chatData : response.data;
+        //filter it to get the desired chat for user/group
+        const filteredMessages = messageData.filter((message: Message) => (response.event !== 'GET_ROOM_CHAT_MES' && message.name === currentChat.name) || message.to === currentChat.name);
+        //and set the preferred chat to the screen
+        if (filteredMessages.length > 0) {
+          dispatch(appendMessageListToChat({name: currentChat.name, page: (chatInfo.page + 1 + chatInfo.offset / 50), messages: response.data}));
+        }
+      } else if (response.status === 'error') {
+        toast.error('Error when get chat message of '.concat(name || 'unknown'), { duration: 2000 });
+      }
+      webSocket.removeEventListener('message', handleLoadMoreMessages);
+    }
     const GET_MESSAGE_FOR_NEW_PAGES = {
       'action': 'onchat',
       'data': {
         'event': currentChat.type === 1 ? 'GET_ROOM_CHAT_MES' : 'GET_PEOPLE_CHAT_MES',
         'data': {
           'name': currentChat.name,
-          'page': pageTracks.current,
+          'page': chatInfo.page + 1 + chatInfo.offset / 50,
         },
       },
     };
+    webSocket.addEventListener('message', handleLoadMoreMessages);
     if (webSocket.readyState === WebSocket.OPEN)
       webSocket.send(JSON.stringify(GET_MESSAGE_FOR_NEW_PAGES));
     if (currentMessage.current) {
@@ -353,11 +272,11 @@ const MessagePage = () => {
               )
             }
             {
-              moreMessage && <button className={'p-4 bg-cyan-200 bg-opacity-75'} onClick={loadMoreMessage}>Read more
+              chatInfo && chatInfo.moreMessage && <button className={'p-4 bg-cyan-200 bg-opacity-75'} onClick={loadMoreMessage}>Read more
                 messages...</button>
             }
             {
-              !moreMessage && <p className={'text-center'}>You have read all messages!</p>
+              !(chatInfo && chatInfo.moreMessage) && <p className={'text-center'}>You have read all messages!</p>
             }
           </div>
 

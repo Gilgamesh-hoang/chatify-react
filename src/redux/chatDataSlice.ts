@@ -15,7 +15,9 @@ export interface ChatInfo {
   name: string,
   profile_pic: string,
   online: boolean,
+  moreMessage: boolean,
   page: number,
+  offset: number,
   messages: Message[],
 }
 
@@ -36,6 +38,7 @@ const chatDataSlice = createSlice({
     setChatDataUsers: (state, action: PayloadAction<ChatInfo[]>) => {
       state.userList = action.payload;
     },
+    // set online user
     setChatDataUserOnline: (state, action: PayloadAction<{ name: string, online: boolean }>) => {
       // first, find the user with the name
       const index = state.userList.findIndex((user) => user.name === action.payload.name);
@@ -48,8 +51,8 @@ const chatDataSlice = createSlice({
         alert('Can\'t find the user list while status to list');
       }
     },
-    // add messages to the list
-    addMessageListToChat: (state, action: PayloadAction<{ name: string, messages: Message[] }>) => {
+    // set messages to the list
+    setMessageListToChat: (state, action: PayloadAction<{ name: string, messages: Message[] }>) => {
       // if there's no message data, no
       if (!action.payload.messages) return;
 
@@ -59,13 +62,25 @@ const chatDataSlice = createSlice({
       if (index >= 0) {
         // convert all message date to REAL DATE
         action.payload.messages.forEach((message) => message.createAt = new Date(message.createAt));
-        // if it's previously empty, append the message
-        if (state.userList[index].messages.length === 0)
-          state.userList[index].messages = action.payload.messages.concat(state.userList[index].messages);
-        else {
-          // let filtered = action.payload.messages.filter((message) => state.userList[index].messages.indexOf(message) < 0)
-          state.userList[index].messages = action.payload.messages.concat(action.payload.messages);
-        }
+        state.userList[index].messages = action.payload.messages;
+        state.userList[index].moreMessage = action.payload.messages.length >= 50;
+        state.userList[index].offset = 0;
+      } else {
+        alert('Can\'t find the user list while add messages to list');
+      }
+    },
+    // append messages to the list
+    appendMessageListToChat: (state, action: PayloadAction<{ name: string, page: number, messages: Message[] }>) => {
+      // first, find the user with the name
+      const index = state.userList.findIndex((user) => user.name === action.payload.name);
+      // if founded
+      if (index >= 0) {
+        // convert all message date to REAL DATE
+        action.payload.messages.forEach((message) => message.createAt = new Date(message.createAt));
+        state.userList[index].messages = state.userList[index].messages.concat(action.payload.messages.filter(
+          (message, i) => i >= state.userList[index].offset));
+        state.userList[index].moreMessage = action.payload.messages.length > 0;
+        state.userList[index].page = action.payload.page;
       } else {
         alert('Can\'t find the user list while add messages to list');
       }
@@ -83,6 +98,7 @@ const chatDataSlice = createSlice({
           ...action.payload.message,
           createAt: new Date(action.payload.message.createAt),
         });
+        state.userList[index].offset++;
         const arr = state.userList.filter((user, i) => i !== index);
         arr.unshift(state.userList[index]);
         state.userList = arr;
@@ -98,8 +114,9 @@ const chatDataSlice = createSlice({
 export const {
   setChatDataUsers,
   setChatDataUserOnline,
-  addMessageListToChat,
+  setMessageListToChat,
   setUpdateNewMessage,
+  appendMessageListToChat,
 } = chatDataSlice.actions;
 
 export default chatDataSlice.reducer;

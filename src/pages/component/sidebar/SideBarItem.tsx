@@ -12,7 +12,7 @@ import { isCloudinaryURL, isValidURL } from '~/utils/linkUtil';
 import { CiImageOn, CiVideoOn } from 'react-icons/ci';
 import { fromAscii } from '~/pages/component/chatbox/MessageItem';
 import { AppDispatch } from '~/redux/store';
-import { addMessageListToChat, setChatDataUserOnline } from '~/redux/chatDataSlice';
+import { setMessageListToChat, setChatDataUserOnline } from '~/redux/chatDataSlice';
 
 
 interface LastMessage {
@@ -70,7 +70,7 @@ const SideBarItem: React.FC<SideBarProp> = (props) => {
         filteredMessages = data.data.filter((message: LastMessage) => message.name === props.name || message.to === props.name);
       // Check if there are any messages.
       if (filteredMessages.length > 0) {
-        dispatch(addMessageListToChat({ name: props.name, messages: filteredMessages }));
+        dispatch(setMessageListToChat({ name: props.name, messages: filteredMessages }));
 
         // Check if the message is for the current user and it's unseen.
         if (filteredMessages[0].to === userName && !unseenRef.current) {
@@ -89,13 +89,16 @@ const SideBarItem: React.FC<SideBarProp> = (props) => {
   useEffect(() => {
     let timeout: NodeJS.Timeout;
     if (socket) {
-      // Add the 'message' event listener and send the "GET_PEOPLE_CHAT_MES" event after 1 second.
-      socket.addEventListener('message', handleMessage);
-      // Create timeout to retrieve new message
-      timeout = setTimeout(() => {
-        if (socket.readyState === WebSocket.OPEN)
-          socket.send(JSON.stringify(getMessParams));
-      }, 1000);
+      if (chatInfo && chatInfo.messages.length === 0) {
+        // Add the 'message' event listener and send the "GET_PEOPLE_CHAT_MES" event after 1 second.
+        socket.addEventListener('message', handleMessage);
+        // Create timeout to retrieve new message
+        timeout = setTimeout(() => {
+          if (socket.readyState === WebSocket.OPEN){
+            socket.send(JSON.stringify(getMessParams));
+          }
+        }, 1000);
+      }
     }
     // Remove the 'message' event listener when the component unmounts.
     return () => {
@@ -126,11 +129,11 @@ const SideBarItem: React.FC<SideBarProp> = (props) => {
   };
 
   useEffect(() => {
+    if (timeRef.current)
+      timeRef.current.innerHTML = chatInfo && chatInfo.messages.length > 0 ? getTime(chatInfo.messages[0]) : 'loading';
     const interval = setInterval(() => {
       if (timeRef.current)
-        timeRef.current.innerHTML = chatInfo && chatInfo.messages.length > 0 ? getTime(chatInfo.messages[0]) : 'nothing';
-      if (timeRef.current)
-        timeRef.current.innerHTML = chatInfo && chatInfo.messages.length > 0 ? getTime(chatInfo.messages[0]) : 'nothing';
+        timeRef.current.innerHTML = chatInfo && chatInfo.messages.length > 0 ? getTime(chatInfo.messages[0]) : 'loading';
     }, 1000);
     return () => {
       clearInterval(interval);
