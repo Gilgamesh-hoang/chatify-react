@@ -27,6 +27,7 @@ import FileUpload from '~/component/FileUpload';
 import FilePreview from '~/component/FilePreview';
 import MessageItem, { toAscii } from '~/pages/component/chatbox/MessageItem';
 import EmojiPicker from '~/component/EmojiPicker';
+import languageUtil from '~/utils/languageUtil';
 
 interface FileUploadProps {
   isImage: boolean;
@@ -45,7 +46,6 @@ const MessagePage = () => {
       page: 1,
     })
   );
-
   //all selector
   const user = useSelector(userSelector);
   const webSocket = useSelector(socketSelector);
@@ -257,7 +257,7 @@ const MessagePage = () => {
               ? 'room'
               : '',
           to: currentChat.name,
-          mes: message,
+          mes: languageUtil.utf8ToBase64(message),
         },
       },
     });
@@ -278,15 +278,17 @@ const MessagePage = () => {
       };
       setAllMessage((prev) => [messageSent].concat(prev));
       // Dispatch a custom event specifically for send_chat, to update the side bar item on socket
-      webSocket.dispatchEvent(new MessageEvent('message', {
-        //where data stored in here is name of the chat
-        data: JSON.stringify({
-          'event': 'SEND_CHAT_SUCCESS',
-          'status': 'success',
-          'data': messageSent,
-        }),
-      }));
-    }
+      webSocket.dispatchEvent(
+        new MessageEvent('message', {
+          //where data stored in here is name of the chat
+          data: JSON.stringify({
+            event: 'SEND_CHAT_SUCCESS',
+            status: 'success',
+            data: messageSent,
+          }),
+        })
+      );
+    };
     // If there is an input value or a selected file and the WebSocket is connected
     if ((inputValue || selectedFile) && webSocket) {
       if (selectedFile) {
