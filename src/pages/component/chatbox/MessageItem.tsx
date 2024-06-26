@@ -1,4 +1,3 @@
-import { Message } from '~/redux/currentChatSlice';
 import moment from 'moment';
 import { isCloudinaryURL, isValidURL } from '~/utils/linkUtil';
 import { FileType } from '~/model/FileType';
@@ -8,6 +7,7 @@ import Tippy from '@tippyjs/react';
 import 'tippy.js/dist/tippy.css';
 import FileDownload from '~/component/FileDownload';
 import { useState } from 'react';
+import { Message } from '~/redux/chatDataSlice';
 
 interface MessageItemProps {
   msg: Message;

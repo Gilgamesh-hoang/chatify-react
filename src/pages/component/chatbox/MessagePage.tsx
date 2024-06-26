@@ -8,17 +8,17 @@ import { Link, useParams } from 'react-router-dom';
 
 import Avatar from '~/component/Avatar';
 import backgroundImage from '~/assets/wallapaper.jpeg';
-import { currentChatSelector, socketSelector, userSelector } from '~/redux/selector';
+import { chatDataSelector, socketSelector, userSelector } from '~/redux/selector';
 import Loading from '~/component/Loading';
 import uploadFile from '~/helper/uploadFile';
 import { SocketEvent } from '~/model/SocketEvent';
 import { AppDispatch } from '~/redux/store';
-import { initCurrentChat, Message, setCurrentChat } from '~/redux/currentChatSlice';
 
 import FileUpload from '~/component/FileUpload';
 import FilePreview from '~/component/FilePreview';
 import MessageItem, { toAscii } from '~/pages/component/chatbox/MessageItem';
 import EmojiPicker from '~/component/EmojiPicker';
+import { Message, setChatDataUserOnline, setUpdateNewMessage } from '~/redux/chatDataSlice';
 
 interface FileUploadProps {
   isImage: boolean;
@@ -28,22 +28,16 @@ interface FileUploadProps {
 const MessagePage = () => {
   //try to set current chat
   const { type, name } = useParams();
-  const dispatch = useDispatch<AppDispatch>();
-  dispatch(setCurrentChat({
-    ...initCurrentChat,
-    'type': type ? parseInt(type) : -1,
-    'name': name || '',
-    'page': 1,
-  }));
+  const currentChat = {
+    type: type === undefined ? 0 : (type === '1' ? 1 : 0),
+    name: name === undefined ? '' : name,
+  }
 
   //all selector
   const user = useSelector(userSelector);
   const webSocket = useSelector(socketSelector);
-  const currentChat = useSelector(currentChatSelector);
 
-  const [userOnline, setUserOnline] = useState<boolean>(false);
   const [loading, setLoading] = useState(false);
-  const [allMessage, setAllMessage] = useState<Message[]>([]);
   const currentMessage = useRef<null | HTMLDivElement>(null);
   const [selectedFile, setSelectedFile] = useState<FileUploadProps | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -51,123 +45,123 @@ const MessagePage = () => {
   //more message button
   const [moreMessage, setMoreMessage] = useState<boolean>(false);
   //track current page
-  const pageTracks = useRef<number>(currentChat.page);
+  const pageTracks = useRef<number>(1);
+  const sentNumber = useRef(0);
 
-  const CHECK_USER_STATUS: SocketEvent = {
-    'action': 'onchat',
-    'data': {
-      'event': 'CHECK_USER',
-      'data': {
-        'user': currentChat.name,
-      },
-    },
-  };
   const GET_MESSAGES: SocketEvent = {
     'action': 'onchat',
     'data': {
       'event': currentChat.type === 1 ? 'GET_ROOM_CHAT_MES' : 'GET_PEOPLE_CHAT_MES',
       'data': {
         'name': currentChat.name,
-        'page': currentChat.page,
+        'page': 1,
       },
     },
   };
 
+  // get chat data info
+  const dispatch = useDispatch<AppDispatch>();
+  const chatData = useSelector(chatDataSelector);
+  const chatInfo = chatData.userList.find((userInfo) => userInfo.name === name);
+
   //when all message updated, scroll to end automatically,
-  // useEffect(() => {
-  //   if (currentMessage.current) {
-  //     currentMessage.current.scrollIntoView({ behavior: 'smooth', block: 'end' });
-  //   }
-  // }, [allMessage]);
+  useEffect(() => {
+    if (currentMessage.current) {
+      currentMessage.current.scrollIntoView({ behavior: 'smooth', block: 'end' });
+    }
+  }, [chatInfo?.messages]);
 
   //set user status triggers on socket or currentChat changed state
-  useEffect(() => {
-    //on page startup, set pageTracks to 1
-    pageTracks.current = 1;
-    //handle the online status
-    const handleStatusCheck = (evt: MessageEvent) => {
-      const response = JSON.parse(evt.data);
-      if (!(response.event === 'CHECK_USER')) return;
-      if (response.status === 'success') {
-        setUserOnline((prev) => {
-          return prev === response.data.status ? prev : response.data.status;
-        });
-      } else if (response.status === 'error') {
-        toast.error('Error when get status of '.concat(name || 'unknown'), { duration: 2000 });
-      }
-    };
-    //handle the get_message
-    const handleGetMessage = (evt: MessageEvent) => {
-      const response = JSON.parse(evt.data);
-      if (!(response.event === 'GET_PEOPLE_CHAT_MES' || response.event === 'GET_ROOM_CHAT_MES')) return;
-      if (response.status === 'success') {
-        //get message data
-        const messageData: Message[] = response.event === 'GET_ROOM_CHAT_MES' ? response.data.chatData : response.data;
-        //filter it to get the desired chat for user/group
-        const filteredMessages = messageData.filter((message: Message) => (response.event !== 'GET_ROOM_CHAT_MES' && message.name === currentChat.name) || message.to === currentChat.name);
-        //and set the preferred chat to the screen
-        if (filteredMessages.length > 0) {
-          //on page 1 do normally
-          if (pageTracks.current === 1) {
-            setAllMessage(filteredMessages);
-            //message scroll to end
-            currentMessage.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
-          }
-          //on ther page tho, append with new data
-          else {
-            setAllMessage((prev) => prev.concat(filteredMessages));
-          }
-          setMoreMessage(filteredMessages.length >= 50);
-        }
-      } else if (response.status === 'error') {
-        toast.error('Error when get chat message of '.concat(name || 'unknown'), { duration: 2000 });
-      }
-    };
-    //handle the success send_chat (aka receiving new message)
-    const handleReceivedNewMessage = (evt: MessageEvent) => {
-      const response = JSON.parse(evt.data);
-      if (!(response.event === 'SEND_CHAT' || response.event === 'SEND_CHAT_COMPLETE')) return;
-      //call get message to update
-      if (response.status === 'success') {
-        if (response.event === 'SEND_CHAT_COMPLETE' && response.data.to === currentChat.name) {
-          setAllMessage((prev) => [{
-            ...response.data,
-            createAt: new Date(response.data.createAt),
-          }].concat(prev));
-        } else if (response.event === 'SEND_CHAT') {
-          setAllMessage((prev) => [{
-            ...response.data,
-            createAt: new Date(Date.now() - 7 * 3600 * 1000),
-          },
-          ].concat(prev));
-        }
-        //only when get new message, should the message scroll to end
-        currentMessage.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
-      } else if (response.status === 'error') {
-        toast.error('Error when get chat message of '.concat(name || 'unknown'), { duration: 2000 });
-      }
-    };
-
-    let interval: NodeJS.Timer;
-    webSocket.addEventListener('message', handleStatusCheck);
-    webSocket.addEventListener('message', handleGetMessage);
-    webSocket.addEventListener('message', handleReceivedNewMessage);
-    if (webSocket) {
-      if (webSocket.readyState === WebSocket.OPEN)
-        webSocket.send(JSON.stringify(GET_MESSAGES));
-      interval = setInterval(() => {
-        if (webSocket.readyState === WebSocket.OPEN)
-          webSocket.send(JSON.stringify(CHECK_USER_STATUS));
-      }, 1000);
-    }
-    return () => {
-      //clean up on detach
-      webSocket.removeEventListener('message', handleStatusCheck);
-      webSocket.removeEventListener('message', handleGetMessage);
-      webSocket.removeEventListener('message', handleReceivedNewMessage);
-      clearInterval(interval);
-    };
-  }, [webSocket, currentChat, name]);
+  // useEffect(() => {
+  //   //handle the online status
+  //   const handleStatusCheck = (evt: MessageEvent) => {
+  //     const response = JSON.parse(evt.data);
+  //     if (!(response.event === 'CHECK_USER')) return;
+  //     if (response.status === 'success') {
+  //       setUserOnline((prev) => {
+  //         return prev === response.data.status ? prev : response.data.status;
+  //       });
+  //     } else if (response.status === 'error') {
+  //       toast.error('Error when get status of '.concat(name || 'unknown'), { duration: 2000 });
+  //     }
+  //   };
+  //   //handle the get_message
+  //   const handleGetMessage = (evt: MessageEvent) => {
+  //     const response = JSON.parse(evt.data);
+  //     if (!(response.event === 'GET_PEOPLE_CHAT_MES' || response.event === 'GET_ROOM_CHAT_MES')) return;
+  //     if (response.status === 'success') {
+  //       //get message data
+  //       const messageData: Message[] = response.event === 'GET_ROOM_CHAT_MES' ? response.data.chatData : response.data;
+  //       //filter it to get the desired chat for user/group
+  //       const filteredMessages = messageData.filter((message: Message) => (response.event !== 'GET_ROOM_CHAT_MES' && message.name === currentChat.name) || message.to === currentChat.name);
+  //       //and set the preferred chat to the screen
+  //       if (filteredMessages.length > 0) {
+  //         //on page 1 do normally
+  //         if (pageTracks.current === 1) {
+  //           setAllMessage(filteredMessages);
+  //           //message scroll to end
+  //           currentMessage.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
+  //         }
+  //         //on ther page tho, append with new data
+  //         else {
+  //           setAllMessage((prev) => {
+  //             console.log(prev, filteredMessages)
+  //             if (prev[prev.length - 1].createAt < filteredMessages[0].createAt)
+  //               return prev;
+  //             return prev.concat(filteredMessages);
+  //           });
+  //         }
+  //         setMoreMessage(filteredMessages.length >= 50);
+  //       }
+  //     } else if (response.status === 'error') {
+  //       toast.error('Error when get chat message of '.concat(name || 'unknown'), { duration: 2000 });
+  //     }
+  //   };
+  //   //handle the success send_chat (aka receiving new message)
+  //   const handleReceivedNewMessage = (evt: MessageEvent) => {
+  //     const response = JSON.parse(evt.data);
+  //     if (!(response.event === 'SEND_CHAT' || response.event === 'SEND_CHAT_COMPLETE')) return;
+  //     //call get message to update
+  //     if (response.status === 'success') {
+  //       if (response.event === 'SEND_CHAT_COMPLETE' && response.data.to === currentChat.name) {
+  //         setAllMessage((prev) => [{
+  //           ...response.data,
+  //           createAt: new Date(response.data.createAt),
+  //         }].concat(prev));
+  //       } else if (response.event === 'SEND_CHAT') {
+  //         setAllMessage((prev) => [{
+  //           ...response.data,
+  //           createAt: new Date(Date.now() - 7 * 3600 * 1000),
+  //         },
+  //         ].concat(prev));
+  //       }
+  //       //only when get new message, should the message scroll to end
+  //       currentMessage.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
+  //     } else if (response.status === 'error') {
+  //       toast.error('Error when get chat message of '.concat(name || 'unknown'), { duration: 2000 });
+  //     }
+  //   };
+  //
+  //   let interval: NodeJS.Timer;
+  //   webSocket.addEventListener('message', handleStatusCheck);
+  //   webSocket.addEventListener('message', handleGetMessage);
+  //   webSocket.addEventListener('message', handleReceivedNewMessage);
+  //   if (webSocket) {
+  //     if (webSocket.readyState === WebSocket.OPEN)
+  //       webSocket.send(JSON.stringify(GET_MESSAGES));
+  //     interval = setInterval(() => {
+  //       if (webSocket.readyState === WebSocket.OPEN)
+  //         webSocket.send(JSON.stringify(CHECK_USER_STATUS));
+  //     }, 1000);
+  //   }
+  //   return () => {
+  //     //clean up on detach
+  //     webSocket.removeEventListener('message', handleStatusCheck);
+  //     webSocket.removeEventListener('message', handleGetMessage);
+  //     webSocket.removeEventListener('message', handleReceivedNewMessage);
+  //     clearInterval(interval);
+  //   };
+  // }, [webSocket, currentChat, name]);
 
 
   const handleUploadFile = async (): Promise<string | null> => {
@@ -209,22 +203,13 @@ const MessagePage = () => {
 
       // Add a fake message to reduce call to update chat, minus the timezone because server use gmt-0
       const messageSent: Message = {
-        type: currentChat.type,
+        type: currentChat.type === 1 ? 1 : 0,
         name: user.username,
         to: currentChat.name,
         mes: message,
         createAt: new Date(Date.now() - 7 * 3600 * 1000),
       };
-      setAllMessage((prev) => [messageSent].concat(prev));
-      // Dispatch a custom event specifically for send_chat, to update the side bar item on socket
-      webSocket.dispatchEvent(new MessageEvent('message', {
-        //where data stored in here is name of the chat
-        data: JSON.stringify({
-          'event': 'SEND_CHAT_SUCCESS',
-          'status': 'success',
-          'data': messageSent,
-        }),
-      }));
+      dispatch(setUpdateNewMessage({ type: 'sent', message: messageSent }));
     }
     // If there is an input value or a selected file and the WebSocket is connected
     if ((inputValue || selectedFile) && webSocket) {
@@ -255,10 +240,6 @@ const MessagePage = () => {
         sendMessageFunction(inputValue);
       }
 
-      // Then scroll to end when message was sent
-      if (currentMessage.current) {
-        currentMessage.current.scrollIntoView({ behavior: 'smooth', block: 'end' });
-      }
     }
 
   };
@@ -283,6 +264,44 @@ const MessagePage = () => {
     }
   };
 
+  // This effect is used to check user status.
+  useEffect(() => {
+    const CHECK_USER_STATUS = {
+      'action': 'onchat',
+      'data': {
+        'event': 'CHECK_USER',
+        'data': {
+          'user': currentChat.name,
+        },
+      },
+    };
+    //handle the online status
+    const handleStatusCheck = (evt: MessageEvent) => {
+      const response = JSON.parse(evt.data);
+      if (!(response.event === 'CHECK_USER')) return;
+      if (response.status === 'success') {
+        if (CHECK_USER_STATUS.data.data.user === name)
+          dispatch(setChatDataUserOnline({name: currentChat.name, online: response.data.status}))
+      } else if (response.status === 'error') {
+        toast.error('Error when get status of '.concat(name || 'unknown'), { duration: 2000 });
+      }
+    };
+
+    let interval: NodeJS.Timer;
+    webSocket.addEventListener('message', handleStatusCheck);
+    if (webSocket) {
+      interval = setInterval(() => {
+        if (webSocket.readyState === WebSocket.OPEN)
+          webSocket.send(JSON.stringify(CHECK_USER_STATUS));
+      }, 1000);
+    }
+    return () => {
+      //clean up on detach
+      webSocket.removeEventListener('message', handleStatusCheck);
+      clearInterval(interval);
+    };
+  }, [webSocket, name]);
+
   return (
     <>
       <Toaster
@@ -299,7 +318,7 @@ const MessagePage = () => {
               <Avatar
                 width={50}
                 height={50}
-                imageUrl={currentChat.profile_pic}
+                imageUrl={''}
                 name={currentChat.name}
                 type={currentChat.type}
               />
@@ -308,7 +327,7 @@ const MessagePage = () => {
               <h3 className="font-semibold text-lg my-0 text-ellipsis line-clamp-1">{currentChat.name}</h3>
               <p className="-my-2 text-sm">
                 {
-                  userOnline ? <span className="text-primary">online</span> :
+                  (chatInfo && chatInfo.online) ? <span className="text-primary">online</span> :
                     <span className="text-slate-400">offline</span>
                 }
               </p>
@@ -329,7 +348,7 @@ const MessagePage = () => {
           {/**all messages show here, note: it's in reverse order aka the elements are place upward */}
           <div className="flex flex-col-reverse gap-2 py-2 mx-2 " ref={currentMessage}>
             {
-              allMessage.map((msg: Message, index: number) =>
+              chatInfo && chatInfo.messages.length > 0 && chatInfo.messages.map((msg: Message, index: number) =>
                 <MessageItem key={index} msg={msg} username={user.username} type={currentChat.type === 1 ? 1 : 0} />,
               )
             }

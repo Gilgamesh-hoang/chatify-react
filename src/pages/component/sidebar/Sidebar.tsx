@@ -1,6 +1,6 @@
 import React, {useEffect, useState} from 'react';
 import {useDispatch, useSelector} from 'react-redux';
-import {socketSelector, socketStatusSelector, userSelector,} from '~/redux/selector';
+import { chatDataSelector, socketSelector, socketStatusSelector, userSelector } from '~/redux/selector';
 import {UserState} from '~/redux/userSlice';
 import {SideBarItem} from '~/pages/component/sidebar';
 import NavSideBar from '~/pages/component/NavSideBar';
@@ -9,12 +9,14 @@ import {SideBarProp} from '~/model/SideBarProp';
 import {AppDispatch} from '~/redux/store';
 import {socketSendMessage} from '~/redux/socketSlice';
 import {useParams} from 'react-router-dom';
+import { ChatInfo, Message, setChatDataUsers, setUpdateNewMessage } from '~/redux/chatDataSlice';
+import toast from 'react-hot-toast';
 
 const Sidebar = () => {
   const {type, name} = useParams();
   const user: UserState = useSelector(userSelector);
+  const chatData = useSelector(chatDataSelector);
   const userName = user.username;
-  const [allUsers, setAllUsers] = useState<SideBarProp[]>([]);
   // const socket = useSelector(socketSelector);
   const socket = useSelector(socketSelector);
   const statusSocket = useSelector(socketStatusSelector);
@@ -31,24 +33,27 @@ const Sidebar = () => {
       socket.onmessage = (event: MessageEvent) => {
         const data = JSON.parse(event.data);
         // I wanted to reload sidebar item, but it's glitching so not yet
-        // if (data.event === 'SEND_CHAT' && data.status === 'success')
-        //   socket.send(JSON.stringify(getUserParams))
-        // else
-          if (data.event === 'GET_USER_LIST' && data.status === 'success') {
-          const conversationUserData = data.data.filter((conv: any) => {
+        if (data.event === 'SEND_CHAT' && data.status === 'success') {
+          console.log(data.data)
+          dispatch(setUpdateNewMessage({ type: 'received', message: { ...data.data, createAt:new Date(Date.now() - 7 * 3600 * 1000) } }));
+        }
+        else if (data.event === 'GET_USER_LIST' && data.status === 'success') {
+          const conversationUserData: ChatInfo[] = [];
+          data.data.forEach((conv: any) => {
             if (conv.name != userName) {
-              let sideBarProp: SideBarProp = {
+              let sideBarProp: ChatInfo = {
                 type: conv.type,
                 name: conv.name,
-                unseen: false,
-                actionTime: new Date(),
+                messages: [],
+                online: false,
+                profile_pic: '',
+                page: 1,
               };
-              return sideBarProp;
+              conversationUserData.push(sideBarProp);
             }
-            return null;
           });
           console.log('conversationUserData', conversationUserData);
-          setAllUsers(conversationUserData);
+          dispatch(setChatDataUsers(conversationUserData));
         }
       };
       // socket.send(JSON.stringify(getUserParams))
@@ -67,13 +72,13 @@ const Sidebar = () => {
           <div className="bg-slate-200 p-[0.5px] mt-1"></div>
 
           <div className="h-[calc(100vh-65px)] overflow-x-hidden overflow-y-auto scrollbar">
-            {allUsers.length === 0 && (
+            {chatData.userList.length === 0 && (
                 <p className="text-lg text-center text-slate-400 pt-5">
                   Explore users to start a conversation with.
                 </p>
             )}
-            {allUsers.map((user, index) => (
-                <SideBarItem key={index} {...user} />
+            {chatData.userList && chatData.userList.map((user, index) => (
+                <SideBarItem key={index} type={user.type === 1 ? 1 : 0} name={user.name} actionTime={new Date()} unseen={false} />
             ))}
           </div>
         </div>
