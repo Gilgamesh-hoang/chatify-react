@@ -126,13 +126,14 @@ const chatDataSlice = createSlice({
         // convert all message date to REAL DATE
         action.payload.messages.forEach((message) => message.createAt = new Date(message.createAt));
         // remove offset amount of message from sending and receiving message.
-        for (let i = 0; i < state.userList[index].offset; i++) {
+        for (let i = 0; i < state.userList[index].offset % 50; i++) {
           action.payload.messages.shift();
         }
         //then append them and update page and check for more messages
         state.userList[index].messages = state.userList[index].messages.concat(action.payload.messages);
         state.userList[index].moreMessage = action.payload.messages.length > 0;
         state.userList[index].page = action.payload.page;
+        state.userList[index].offset = 0;
       } else {
         alert('Can\'t find the user list while add messages to list');
       }

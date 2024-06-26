@@ -16,7 +16,7 @@ import { AppDispatch } from '~/redux/store';
 
 import FileUpload from '~/component/FileUpload';
 import FilePreview from '~/component/FilePreview';
-import MessageItem, { toAscii } from '~/pages/component/chatbox/MessageItem';
+import MessageItem from '~/pages/component/chatbox/MessageItem';
 import EmojiPicker from '~/component/EmojiPicker';
 import { appendMessageListToChat, Message, setChatDataUserOnline, setUpdateNewMessage } from '~/redux/chatDataSlice';
 import languageUtil from '~/utils/languageUtil';
@@ -45,26 +45,6 @@ const MessagePage = () => {
   );
   const inputRef = useRef<HTMLInputElement>(null);
   const submitRef = useRef<HTMLButtonElement>(null);
-
-  const CHECK_USER_STATUS: SocketEvent = {
-    action: 'onchat',
-    data: {
-      event: 'CHECK_USER',
-      data: {
-        user: currentChat.name,
-      },
-    },
-  };
-  const GET_MESSAGES: SocketEvent = {
-    action: 'onchat',
-    data: {
-      event: currentChat.type === 1 ? 'GET_ROOM_CHAT_MES' : 'GET_PEOPLE_CHAT_MES',
-      data: {
-        name: currentChat.name,
-        page: 1,
-      },
-    },
-  };
 
   // get chat data info
   const dispatch = useDispatch<AppDispatch>();
@@ -180,9 +160,7 @@ const MessagePage = () => {
         //filter it to get the desired chat for user/group
         const filteredMessages = messageData.filter((message: Message) => (response.event !== 'GET_ROOM_CHAT_MES' && message.name === currentChat.name) || message.to === currentChat.name);
         //and set the preferred chat to the screen
-        if (filteredMessages.length > 0) {
-          dispatch(appendMessageListToChat({name: currentChat.name, page: (chatInfo.page + 1 + chatInfo.offset / 50), messages: response.data}));
-        }
+        dispatch(appendMessageListToChat({name: currentChat.name, page: (chatInfo.page + 1 + chatInfo.offset / 50), messages: filteredMessages}));
       } else if (response.status === 'error') {
         toast.error('Error when get chat message of '.concat(name || 'unknown'), { duration: 2000 });
       }
@@ -194,7 +172,7 @@ const MessagePage = () => {
         event: currentChat.type === 1 ? 'GET_ROOM_CHAT_MES' : 'GET_PEOPLE_CHAT_MES',
         data: {
           name: currentChat.name,
-          page: chatInfo.page + 1 + chatInfo.offset / 50,
+          page: chatInfo.page + 1 + Math.floor(chatInfo.offset / 50),
         },
       },
     };
@@ -222,8 +200,7 @@ const MessagePage = () => {
       const response = JSON.parse(evt.data);
       if (!(response.event === 'CHECK_USER')) return;
       if (response.status === 'success') {
-        if (CHECK_USER_STATUS.data.data.user === name)
-          dispatch(setChatDataUserOnline({name: currentChat.name, online: response.data.status}))
+        dispatch(setChatDataUserOnline({name: currentChat.name, online: response.data.status}))
       } else if (response.status === 'error') {
         toast.error('Error when get status of '.concat(name || 'unknown'), { duration: 2000 });
       }
