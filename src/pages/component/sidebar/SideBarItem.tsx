@@ -13,6 +13,7 @@ import { CiImageOn, CiVideoOn } from 'react-icons/ci';
 import { fromAscii } from '~/pages/component/chatbox/MessageItem';
 import { AppDispatch } from '~/redux/store';
 import { setMessageListToChat, setChatDataUserOnline } from '~/redux/chatDataSlice';
+import moment from 'moment';
 
 
 interface LastMessage {
@@ -94,7 +95,7 @@ const SideBarItem: React.FC<SideBarProp> = (props) => {
         socket.addEventListener('message', handleMessage);
         // Create timeout to retrieve new message
         timeout = setTimeout(() => {
-          if (socket.readyState === WebSocket.OPEN){
+          if (socket.readyState === WebSocket.OPEN) {
             socket.send(JSON.stringify(getMessParams));
           }
         }, 1000);
@@ -111,21 +112,30 @@ const SideBarItem: React.FC<SideBarProp> = (props) => {
     const currentDate = new Date();
     const TIMEZONE_OFFSET = 7; // GMT+7
     // console.log('lastMessage.createAt', lastMessage.createAt)
-    const sameDay = message.createAt.getDate() === currentDate.getDate();
-    const sameYear = message.createAt.getFullYear() === currentDate.getFullYear();
+    // const sameDay = message.createAt.getDate() === currentDate.getDate();
+    // const sameYear = message.createAt.getFullYear() === currentDate.getFullYear();
+    //
+    // return sameDay
+    //   // ...and if the current hour and the action time's hour are the same...
+    //   ? currentDate.getHours() - TIMEZONE_OFFSET - message.createAt.getHours() === 0
+    //     // ...then set 'time' to the difference in minutes between the current time and the action time,
+    //     ? (currentDate.getMinutes() - message.createAt.getMinutes()) + ' min'
+    //     // ...otherwise, set 'time' to the difference in hours between the current time and the action time,
+    //     : (currentDate.getHours() - TIMEZONE_OFFSET - message.createAt.getHours()) + ' hour'
+    //   : sameYear
+    //     //set 'time' to the action time's date and month.
+    //     ? message.createAt.getDate() + '/' + message.createAt.getMonth()
+    //     // ...otherwise, set 'time' to the action time's month and year.
+    //     : message.createAt.getMonth() + '/' + message.createAt.getFullYear();
+    const deltaTime = currentDate.getTime() - 7 * 3600 * 1000 - message.createAt.getTime();
+    const year = (365.25 * 24 * 3600 * 1000), week = (7 * 24 * 3600 * 1000), day = 24 * 3600 * 1000, hour = 3600 * 1000, minute = 60 * 1000;
+    // if delta is big for year
+    return deltaTime > year ? Math.floor(deltaTime / year) + " year ago" :
+      deltaTime > week ? Math.floor(deltaTime / week) + " week ago" :
+        deltaTime > day ? Math.floor(deltaTime / day) + " day ago" :
+          deltaTime > hour ? Math.floor(deltaTime / hour) + " hour ago" :
+            Math.floor(deltaTime / minute) + " minute ago";
 
-    return sameDay
-      // ...and if the current hour and the action time's hour are the same...
-      ? currentDate.getHours() - TIMEZONE_OFFSET - message.createAt.getHours() === 0
-        // ...then set 'time' to the difference in minutes between the current time and the action time,
-        ? (currentDate.getMinutes() - message.createAt.getMinutes()) + ' min'
-        // ...otherwise, set 'time' to the difference in hours between the current time and the action time,
-        : (currentDate.getHours() - TIMEZONE_OFFSET - message.createAt.getHours()) + ' hour'
-      : sameYear
-        //set 'time' to the action time's date and month.
-        ? message.createAt.getDate() + '/' + message.createAt.getMonth()
-        // ...otherwise, set 'time' to the action time's month and year.
-        : message.createAt.getMonth() + '/' + message.createAt.getFullYear();
   };
 
   useEffect(() => {
@@ -155,7 +165,8 @@ const SideBarItem: React.FC<SideBarProp> = (props) => {
     const message = isURL ? (isImage ? 'Send image ' : isVideo ? 'Send video ' : lastMessage.mes) : fromAscii(lastMessage.mes);
 
     return (
-      <p className={clsx('overflow-hidden text-ellipsis whitespace-nowrap text-gray-950', { 'font-bold': unseenRef.current })}>
+      <p
+        className={clsx('overflow-hidden text-ellipsis whitespace-nowrap text-gray-950', { 'font-bold': unseenRef.current })}>
         <span>{sender + message}</span>
         {isImage && <CiImageOn className="ml-1 size-4 inline" />}
         {isVideo && <CiVideoOn className="ml-1 size-4 inline" />}
