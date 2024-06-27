@@ -138,20 +138,20 @@ const SideBarItem: React.FC<SideBarProp> = (props) => {
     const deltaTime = currentDate.getTime() - 7 * 3600 * 1000 - message.createAt.getTime();
     const year = (365.25 * 24 * 3600 * 1000), week = (7 * 24 * 3600 * 1000), day = 24 * 3600 * 1000, hour = 3600 * 1000, minute = 60 * 1000;
     // if delta is big for year
-    return deltaTime > year ? Math.floor(deltaTime / year) + " year ago" :
-      deltaTime > week ? Math.floor(deltaTime / week) + " week ago" :
-        deltaTime > day ? Math.floor(deltaTime / day) + " day ago" :
-          deltaTime > hour ? Math.floor(deltaTime / hour) + " hour ago" :
-            Math.floor(deltaTime / minute) + " minute ago";
+    return deltaTime > year ? Math.floor(deltaTime / year) + " year" + (Math.floor(deltaTime / year) > 1 ? 's' : ''):
+      deltaTime > week ? Math.floor(deltaTime / week) + " week" + (Math.floor(deltaTime / week) > 1 ? 's' : '') :
+        deltaTime > day ? Math.floor(deltaTime / day) + " day" + (Math.floor(deltaTime / day) > 1 ? 's' : '') :
+          deltaTime > hour ? Math.floor(deltaTime / hour) + " hour" + (Math.floor(deltaTime / hour) > 1 ? 's' : '') :
+            Math.floor(deltaTime / minute) + " minute" + (Math.floor(deltaTime / minute) > 1 ? 's' : '');
 
   };
 
   useEffect(() => {
     if (timeRef.current)
-      timeRef.current.innerHTML = chatInfo && chatInfo.messages.length > 0 ? getTime(chatInfo.messages[0]) : 'loading';
+      timeRef.current.innerHTML = chatInfo && chatInfo.messages.length > 0 ? getTime(chatInfo.messages[0]) : '';
     const interval = setInterval(() => {
       if (timeRef.current)
-        timeRef.current.innerHTML = chatInfo && chatInfo.messages.length > 0 ? getTime(chatInfo.messages[0]) : 'loading';
+        timeRef.current.innerHTML = chatInfo && chatInfo.messages.length > 0 ? getTime(chatInfo.messages[0]) : '';
     }, 1000);
     return () => {
       clearInterval(interval);
@@ -186,13 +186,10 @@ const SideBarItem: React.FC<SideBarProp> = (props) => {
 
     return (
       <p
-        className={clsx(
-          'overflow-hidden text-ellipsis whitespace-nowrap text-gray-950',
-          { 'font-bold': unseenRef.current }
-        )}
+        className={clsx('overflow-hidden text-ellipsis whitespace-nowrap', { 'font-bold': unseenRef.current })}
       >
         <span>{sender + message}</span>
-        {isImage && <CiImageOn className="ml-1 size-4 inline" />}
+        {isImage && <CiImageOn className="ml-1 size-4 inline" />}AA
         {isVideo && <CiVideoOn className="ml-1 size-4 inline" />}
       </p>
     );
@@ -207,13 +204,13 @@ const SideBarItem: React.FC<SideBarProp> = (props) => {
         onClick={handleSeen}
         className={clsx(
           'flex items-center gap-2 py-3 px-2 border border-transparent hover:border-primary rounded hover:bg-slate-100 cursor-pointer',
-          props.name == name ? 'bg-slate-200 ' : ''
+          props.name === name ? 'bg-slate-200 ' : ''
         )}
       >
-        <div>
+        <div className={''}>
           <Avatar type={props.type} width={40} height={40} name={props.name} />
         </div>
-        <div className={'lg:max-w-[200px]'}>
+        <div className={'min-w-0'}>
           <h3
             className={clsx(
               'text-ellipsis line-clamp-1 text-base whitespace-nowrap',
@@ -224,7 +221,7 @@ const SideBarItem: React.FC<SideBarProp> = (props) => {
             {props.name}
           </h3>
 
-          <div className="text-slate-500 text-xs flex items-center gap-1">
+          <div className="text-slate-500 text-xs items-center gap-1">
             {
               chatInfo && chatInfo.messages.length > 0 && renderLastMess({ ...chatInfo.messages[0] })
             }

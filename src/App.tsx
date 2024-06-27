@@ -1,16 +1,15 @@
-import React, { useEffect, useLayoutEffect } from 'react';
+import React, { useEffect } from 'react';
 import './App.css';
 import { privateRoutes, publicRoutes, RouteType } from './router';
 import DefaultLayout from './layout/DefaultLayout';
-import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
+import { BrowserRouter as Router, Navigate, Route, Routes } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import {
   socketSelector,
   socketStatusSelector,
   userSelector,
 } from './redux/selector';
-import Login from './pages/Login';
-import { AppDispatch, RootState } from './redux/store';
+import { AppDispatch, } from './redux/store';
 import { socketConnect, socketSendMessage } from './redux/socketSlice';
 import { SocketEvent } from './model/SocketEvent';
 
@@ -19,7 +18,6 @@ function App() {
   const userName = localStorage.getItem('userName') ?? '';
   const user = useSelector(userSelector);
   const dispatch = useDispatch<AppDispatch>();
-  // const socket = useSelector(socketSelector)
   const socket = useSelector(socketSelector);
   const statusSocket = useSelector(socketStatusSelector);
 
@@ -76,7 +74,7 @@ function App() {
             privateRoutes.map((routeObject, index: number) =>
               RouteRender(routeObject, index)
             )}
-          {/*<Route path="*" element={<Login />} />*/}
+          <Route path="*" element={userName ? <Navigate to={'/'}/> : <Navigate to={'/login'} />} />
         </Routes>
       </Router>
     </div>

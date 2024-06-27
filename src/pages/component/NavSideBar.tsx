@@ -17,7 +17,7 @@ const NavSideBar: React.FC<NavSideBarProps> = ({ name }) => {
   const [openSearchUser, setOpenSearchUser] = useState(false);
   const handleLogout = () => {
     localStorage.clear();
-    window.location.reload();
+    window.location.href = '/login';
   };
   return (
     <div className="bg-slate-100 w-12 h-full rounded-tr-lg rounded-br-lg py-5 text-slate-600 flex flex-col justify-between">

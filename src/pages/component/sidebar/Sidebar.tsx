@@ -64,10 +64,10 @@ const Sidebar = () => {
   }, [socket, userName, statusSocket]);
 
   return (
-    <div className="w-full h-full grid grid-cols-[48px,1fr] lg:grid-cols-[48px,322px] bg-white">
+    <div className="w-full h-full grid grid-cols-[48px,1fr] bg-white">
       <NavSideBar name={user.username} />
 
-      <div className="w-full">
+      <div className="w-full min-w-0">
         <div className="h-16 flex items-center py-0.5">
           <h2 className="text-xl font-bold p-4 text-slate-800 ">Message</h2>
         </div>
