@@ -189,7 +189,7 @@ const SideBarItem: React.FC<SideBarProp> = (props) => {
         className={clsx('overflow-hidden text-ellipsis whitespace-nowrap', { 'font-bold': unseenRef.current })}
       >
         <span>{sender + message}</span>
-        {isImage && <CiImageOn className="ml-1 size-4 inline" />}AA
+        {isImage && <CiImageOn className="ml-1 size-4 inline" />}
         {isVideo && <CiVideoOn className="ml-1 size-4 inline" />}
       </p>
     );
