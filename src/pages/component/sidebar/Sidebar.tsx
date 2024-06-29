@@ -73,7 +73,7 @@ const Sidebar = () => {
         </div>
         <div className="bg-slate-200 p-[0.5px] mt-1"></div>
 
-        <div className="h-[calc(100vh-65px)] overflow-x-hidden overflow-y-auto scrollbar">
+        <div className="h-[calc(100vh-69px)] overflow-x-hidden overflow-y-auto scrollbar">
             {chatData.userList.length === 0 && (
             <p className="text-lg text-center text-slate-400 pt-5">
               Explore users to start a conversation with.
