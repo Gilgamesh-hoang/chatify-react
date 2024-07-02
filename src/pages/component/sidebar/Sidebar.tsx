@@ -5,15 +5,12 @@ import { UserState } from '~/redux/userSlice';
 import { SideBarItem } from '~/pages/component/sidebar';
 import NavSideBar from '~/pages/component/NavSideBar';
 import { SocketEvent } from '~/model/SocketEvent';
-import { SideBarProp } from '~/model/SideBarProp';
 import { AppDispatch } from '~/redux/store';
 import { socketSendMessage } from '~/redux/socketSlice';
 import { useParams } from 'react-router-dom';
-import { ChatInfo, Message, setChatDataUsers, setUpdateNewMessage } from '~/redux/chatDataSlice';
-import toast from 'react-hot-toast';
+import { setChatDataUsers, setUpdateNewMessage, UserInfo } from '~/redux/chatDataSlice';
 
 const Sidebar = () => {
-  const { type, name } = useParams();
   const user: UserState = useSelector(userSelector);
   const chatData = useSelector(chatDataSelector);
   const userName = user.username;
@@ -34,24 +31,13 @@ const Sidebar = () => {
         const data = JSON.parse(event.data);
         // I wanted to reload sidebar item, but it's glitching so not yet
         if (data.event === 'SEND_CHAT' && data.status === 'success') {
-          console.log(data.data)
           dispatch(setUpdateNewMessage({ type: 'received', message: { ...data.data, createAt:new Date(Date.now() - 7 * 3600 * 1000) } }));
         }
         else if (data.event === 'GET_USER_LIST' && data.status === 'success') {
-          const conversationUserData: ChatInfo[] = [];
+          const conversationUserData: UserInfo[] = [];
           data.data.forEach((conv: any) => {
-            if (conv.name != userName) {
-              let sideBarProp: ChatInfo = {
-                type: conv.type,
-                name: conv.name,
-                messages: [],
-                online: false,
-                profile_pic: '',
-                moreMessage: false,
-                offset: 0,
-                page: 1,
-              };
-              conversationUserData.push(sideBarProp);
+            if (conv.name !== userName) {
+              conversationUserData.push({name: conv.name, type: conv.type === 1 ? 1 : 0, actionTime: new Date(conv.actionTime)});
             }
           });
           console.log('conversationUserData', conversationUserData);

@@ -10,6 +10,8 @@ import React, { useState } from 'react';
 import languageUtil from '~/utils/languageUtil';
 import { Message } from '~/redux/chatDataSlice';
 import clsx from 'clsx';
+import { useSelector } from 'react-redux';
+import { chatDataSelector } from '~/redux/selector';
 
 interface MessageItemProps {
   msg: Message;
@@ -17,9 +19,10 @@ interface MessageItemProps {
   type: 0 | 1;
   selected: boolean;
   querySearch?: string;
+  roomOwner?: string;
 }
 
-const MessageItem: React.FC<MessageItemProps> = ({ msg, username, type, selected, querySearch}) => {
+const MessageItem: React.FC<MessageItemProps> = ({ msg, username, type, selected, querySearch, roomOwner}) => {
   const [isImageError, setImageError] = useState(false);
   const TIMEZONE_OFFSET = 7 * 3600 * 1000; //GMT+7
   const realCreateAt = new Date(
@@ -90,12 +93,12 @@ const MessageItem: React.FC<MessageItemProps> = ({ msg, username, type, selected
   const renderAvatar = () => {
     return (
       <div className={'px-2'} title={msg.name}>
-        <Avatar width={35} height={35} type={0} name={msg.name} imageUrl={''} />
+        <Avatar width={35} height={35} type={0} name={msg.name} owner={msg.name === roomOwner} />
       </div>
     );
   };
   return (
-    <div className={'flex'}>
+    <div className={'flex '}>
       {type === 1 && msg.name !== username && renderAvatar()}
       <div className={clsx(` p-1 rounded w-fit max-w-[243px] md:max-w-sm lg:max-w-md`,
           username === msg.name ? 'ml-auto bg-teal-100 max-w-[280px]' : 'bg-white',

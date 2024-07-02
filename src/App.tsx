@@ -2,16 +2,13 @@ import React, { useEffect } from 'react';
 import './App.css';
 import { privateRoutes, publicRoutes, RouteType } from './router';
 import DefaultLayout from './layout/DefaultLayout';
-import { BrowserRouter as Router, Navigate, Route, Routes } from 'react-router-dom';
+import { BrowserRouter as Router, Navigate, Route, Routes, useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
-import {
-  socketSelector,
-  socketStatusSelector,
-  userSelector,
-} from './redux/selector';
+import { socketSelector, socketStatusSelector, userSelector, } from './redux/selector';
 import { AppDispatch, } from './redux/store';
 import { socketConnect, socketSendMessage } from './redux/socketSlice';
 import { SocketEvent } from './model/SocketEvent';
+import { message } from 'antd';
 
 function App() {
   const token = localStorage.getItem('token') ?? '';
@@ -28,7 +25,7 @@ function App() {
 
   useEffect(() => {
     if (socket && statusSocket == 'open') {
-      if (token && userName && !user.username) {
+      if (token && userName) {
         const reloginParams: SocketEvent = {
           action: 'onchat',
           data: {
@@ -39,7 +36,7 @@ function App() {
             },
           },
         };
-        dispatch(socketSendMessage(reloginParams));
+        if (!user.username) dispatch(socketSendMessage(reloginParams));
       }
     }
   }, [statusSocket, socket]);

@@ -23,6 +23,7 @@ import languageUtil from '~/utils/languageUtil';
 import { IoChevronDown, IoChevronUp, IoClose, IoSearch } from 'react-icons/io5';
 import clsx from 'clsx';
 import { isCloudinaryURL, isValidURL } from '~/utils/linkUtil';
+import MessageHeader from '~/pages/component/chatbox/MessageHeader';
 
 interface FileUploadProps {
   isImage: boolean;
@@ -42,7 +43,7 @@ const MessagePage = () => {
   const webSocket = useSelector(socketSelector);
 
   const [loading, setLoading] = useState(false);
-  const [loadingMoreMessages, setLoadingMoreMessages] = useState(false);
+  const [loading2, setLoading2] = useState(true);
   const currentMessage = useRef<HTMLDivElement>(null);
   const [selectedFile, setSelectedFile] = useState<FileUploadProps | null>(
     null,
@@ -56,7 +57,7 @@ const MessagePage = () => {
   const dispatch = useDispatch<AppDispatch>();
   const chatData = useSelector(chatDataSelector);
   const chatInfo = chatData.userList.find((userInfo) => userInfo.name === name);
-
+  const chatLastMessage = chatInfo && chatInfo.messages && chatInfo.messages.length > 0 ? chatInfo.messages[0] : null;
   // for searching purposes only
   const [searchState, setSearchState] = useState(false);
   const [searchResult, setSearchResult] = useState<number[]>([]);
@@ -66,7 +67,10 @@ const MessagePage = () => {
   // for search input reset
   const resetRef = useRef<HTMLButtonElement>(null);
 
-  // on 'type' and 'name' change (from click to other chat), scroll to end automatically,
+  const moreMessageButton = useRef<HTMLButtonElement>(null);
+  const moreMessageSpinner = useRef<HTMLDivElement>(null);
+
+  // on 'type' and 'name' change (from click to other chat) or new last messages update, scroll to end automatically,
   useEffect(() => {
     // reset search data
     searchInput.current = '';
@@ -74,7 +78,7 @@ const MessagePage = () => {
     setSearchCursor(-1);
     if (currentMessage.current)
       currentMessage.current.scrollIntoView({ behavior: 'smooth', block: 'end' });
-  }, [type, name]);
+  }, [type, name, chatLastMessage, currentMessage]);
 
   const handleUploadFile = async (): Promise<string | null> => {
     if (selectedFile) {
@@ -130,7 +134,13 @@ const MessagePage = () => {
     };
     // If there is an input value or a selected file and the WebSocket is connected
     if ((inputValue || selectedFile) && webSocket) {
+
       if (selectedFile) {
+        // Disable the input field and submit button
+        if (inputRef.current)
+          inputRef.current.disabled = true;
+        if (submitRef.current)
+          submitRef.current.disabled = true;
         // Upload the file and get the URL
         const url = await handleUploadFile();
         if (url) {
@@ -147,22 +157,25 @@ const MessagePage = () => {
           }
           // ...else just send that url
           else sendMessageFunction(url);
+          // Clear the input field
+          if (inputRef.current) {
+            inputRef.current.disabled = false;
+            inputRef.current.value = '';
+            inputRef.current.rows = 1;
+          }
+          if (submitRef.current)
+            submitRef.current.disabled = false;
         }
       }
       // If there's only text, the message is sent with no delay
       else if (inputValue) {
+        // Then send it
+        sendMessageFunction(inputValue);
         // Clear the input field
         if (inputRef.current) {
           inputRef.current.value = '';
           inputRef.current.rows = 1;
         }
-        // Then send it
-        sendMessageFunction(inputValue);
-      }
-
-      // Then scroll to end when message was sent
-      if (currentMessage.current) {
-        currentMessage.current.scrollIntoView({ behavior: 'smooth', block: 'end' });
       }
     }
   };
@@ -186,8 +199,12 @@ const MessagePage = () => {
       } else if (response.status === 'error') {
         toast.error('Error when get chat message of '.concat(name || 'unknown'), { duration: 2000 });
       }
-      setLoadingMoreMessages(false);
       webSocket.removeEventListener('message', handleLoadMoreMessages);
+
+      if (moreMessageButton.current)
+        moreMessageButton.current.disabled = false;
+      if (moreMessageSpinner.current)
+        moreMessageSpinner.current.hidden = true;
     };
     const GET_MESSAGE_FOR_NEW_PAGES = {
       action: 'onchat',
@@ -201,12 +218,15 @@ const MessagePage = () => {
     };
     webSocket.addEventListener('message', handleLoadMoreMessages);
     if (webSocket.readyState === WebSocket.OPEN) {
-      setLoadingMoreMessages(true);
       webSocket.send(JSON.stringify(GET_MESSAGE_FOR_NEW_PAGES));
     }
     if (currentMessage.current && currentMessage.current.lastElementChild) {
       currentMessage.current.lastElementChild.scrollIntoView({ behavior: 'smooth' });
     }
+    if (moreMessageButton.current)
+      moreMessageButton.current.disabled = true;
+    if (moreMessageSpinner.current)
+      moreMessageSpinner.current.hidden = false;
   };
 
   // This effect is used to check user status.
@@ -258,6 +278,7 @@ const MessagePage = () => {
   // do the search chat
   const filterSearch = (queryString: string, keepCursor: boolean) => {
     if (!chatInfo) return;
+    if (!chatInfo.messages) return;
     // create a founded array contains INDEXES of messages
     const founded: number[] = [];
     // if query string exists...
@@ -270,21 +291,11 @@ const MessagePage = () => {
             founded.push(index);
       });
     // update the search results with those indexes AND search cursor
-    if (searchResult !== founded) {
-      setSearchResult(founded);
-      // keep cursor to not reset back to 1st search result
-      if (!keepCursor) setSearchCursor(founded.length > 0 ? 0 : -1);
-    }
+    setSearchResult(founded);
+    // keep cursor to not reset back to 1st search result
+    if (!keepCursor) setSearchCursor(founded.length > 0 ? 0 : -1);
     // set the search query string
     searchInput.current = queryString;
-  };
-
-  // on submit search, do the filter search
-  const handleSearchSubmit = (evt: React.FormEvent<HTMLFormElement>) => {
-    evt.preventDefault();
-    // get the input from the form then filter search it
-    const inputData = (evt.currentTarget.elements[0] as HTMLInputElement).value;
-    filterSearch(inputData, false);
   };
 
   // On 'message' updated (via send, received, load more message), filter search them
@@ -296,7 +307,15 @@ const MessagePage = () => {
   useEffect(() => {
     if (searchFocus.current)
       searchFocus.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
-  }, [searchFocus, searchCursor]);
+  }, [searchResult, searchState, searchCursor]);
+
+  // on submit search, do the filter search
+  const handleSearchSubmit = (evt: React.FormEvent<HTMLFormElement>) => {
+    evt.preventDefault();
+    // get the input from the form then filter search it
+    const inputData = (evt.currentTarget.elements[0] as HTMLInputElement).value;
+    filterSearch(inputData, false);
+  };
 
   // clear input and hide the reset button
   const handleResetVisible = (evt: ChangeEvent<HTMLInputElement>) => {
@@ -351,7 +370,9 @@ const MessagePage = () => {
             <div className="h-12 bg-white flex px-4 gap-2 items-center">
               {/*search input*/}
               <form className="h-full grow flex gap-2 items-center " onSubmit={handleSearchSubmit}
-                    onReset={() => {if (resetRef.current) resetRef.current.hidden = true;}}>
+                    onReset={() => {
+                      if (resetRef.current) resetRef.current.hidden = true;
+                    }}>
                 <input type="text" placeholder="Search here..." className="py-1 px-4 outline-none w-full h-fit"
                        onChange={handleResetVisible} />
                 <button type="reset" ref={resetRef} hidden><IoClose size={20} className="text-secondary" /></button>
@@ -392,9 +413,9 @@ const MessagePage = () => {
           className={clsx(`h-[calc(100vh-128px)] overflow-x-hidden overflow-y-scroll scrollbar relative bg-slate-200 bg-opacity-50`,
             searchState && 'h-[calc(100vh-128px-3rem)]')}>
           {/**all messages show here, note: it's in reverse order aka the elements are place upward */}
-          <div className="flex flex-col-reverse gap-2 py-2 mx-2 " ref={currentMessage}>
+          <div className="flex flex-col-reverse justify-end gap-2 py-2 mx-2 min-h-full" ref={currentMessage}>
             {
-              chatInfo && chatInfo.messages.length > 0 && chatInfo.messages.map((msg: Message, index: number) => {
+              chatInfo && chatInfo.messages && chatInfo.messages.length > 0 && chatInfo.messages.map((msg: Message, index: number) => {
                   const isSelected = searchState && searchResult[searchCursor] === index;
                   return (<div ref={isSelected ? searchFocus : undefined}>
                     <MessageItem key={index}
@@ -402,7 +423,9 @@ const MessagePage = () => {
                                  username={user.username}
                                  type={currentChat.type === 1 ? 1 : 0}
                                  selected={isSelected}
-                                 querySearch={searchState ? searchInput.current : undefined} />
+                                 querySearch={searchState ? searchInput.current : undefined}
+                                 roomOwner={chatInfo.room_owner}
+                    />
                   </div>);
                 },
               )
@@ -410,15 +433,20 @@ const MessagePage = () => {
             {/*load more message ui*/}
             {
               chatInfo && chatInfo.moreMessage &&
-              <button className={'p-4 bg-cyan-200 bg-opacity-75 flex justify-center items-center disabled:bg-white'}
+              <button className={'p-4 bg-cyan-200 bg-opacity-75 flex justify-center items-center disabled:bg-white mt-auto'}
                       onClick={loadMoreMessage}
-                      disabled={loadingMoreMessages}>
-                {loadingMoreMessages && (<div className="px-2"><Loading /></div>)} Read more messages...
+                      ref={moreMessageButton}>
+                <div className="px-2" hidden ref={moreMessageSpinner}><Loading /></div>Read more messages...
               </button>
             }
-            {/*On no more message show this*/}
+            {/*Loading...*/}
             {
-              !(chatInfo && chatInfo.moreMessage) && <p className={'text-center'}>You have read all messages!</p>
+              (chatInfo && !chatInfo.messages) && <div className="mt-auto"><Loading /></div>
+            }
+            {/*No more message show this*/}
+            {
+              chatInfo && chatInfo.messages && (chatInfo.messages.length === 0 || !chatInfo.moreMessage) &&
+              <MessageHeader key={name} name={chatInfo.name} type={chatInfo.type} owner={chatInfo.room_owner} members={chatInfo.room_member} />
             }
           </div>
 
@@ -428,7 +456,7 @@ const MessagePage = () => {
           )}
 
           {loading && (
-            <div className="w-full h-full flex sticky bottom-0 justify-center items-center">
+            <div className="w-full h-full flex sticky bottom-0 justify-center items-center bg-black bg-opacity-50">
               <Loading />
             </div>
           )}
@@ -447,16 +475,21 @@ const MessagePage = () => {
             className="h-full w-full flex gap-2 items-center"
             onSubmit={handleSendMessage}
           >
-            <textarea rows={1} className="py-1 px-4 outline-none w-full h-fit resize-none"
-                      onKeyUp={(event) => {
+            <textarea rows={1} className="py-1 px-4 outline-none w-full h-fit resize-none disabled:text-gray-500"
+                      onKeyDown={(event) => {
                         // On plain enter or ctrl + enter, send message.
                         // On shift + enter or alt + enter, add a new line to it
-                        if (event.key === 'Enter' && !(event.altKey || event.shiftKey) && submitRef.current)
-                          submitRef.current.click();
+                        if (event.key === 'Enter') {
+                          if (!(event.altKey || event.shiftKey) && submitRef.current) {
+                            event.preventDefault();
+                            event.stopPropagation();
+                            submitRef.current.click();
+                          }
+                        }
                       }}
                       onChange={handleSizeChange} ref={inputRef} placeholder="Type message here"
             />
-            <button type="submit" className="text-primary hover:text-secondary" ref={submitRef} >
+            <button type="submit" className="text-primary hover:text-secondary disabled:animate-pulse" ref={submitRef}>
               <IoMdSend size={28} />
             </button>
           </form>

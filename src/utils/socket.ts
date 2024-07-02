@@ -9,6 +9,7 @@ export const setupWebSocket = (dispatch: Dispatch) => {
     dispatch(socketUpdateStatus('open'));
     console.log('WebSocket connection established');
   };
+
   socket.onmessage = (event) => {
     const data = JSON.parse(event.data);
     if (data.status === 'success') {
@@ -16,14 +17,16 @@ export const setupWebSocket = (dispatch: Dispatch) => {
         case 'RE_LOGIN':
           const username = localStorage.getItem('userName');
           if (!username) {
-            message.error('Not found username');
+            message.error('Username not found, redirecting to login...');
             localStorage.clear();
             setTimeout(() => {
               window.location.href = '/login';
-            }, 200);
+            }, 500);
           }
-          localStorage.setItem('token', data.data.RE_LOGIN_CODE);
-          dispatch(setUserName(username!));
+          else {
+            localStorage.setItem('token', data.data.RE_LOGIN_CODE);
+            dispatch(setUserName(username));
+          }
           break;
       }
     } else if (data.status === 'error') {

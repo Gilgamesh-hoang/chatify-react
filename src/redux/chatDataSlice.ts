@@ -1,5 +1,13 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 
+// Information of user taken from GET_USER_LIST
+export interface UserInfo {
+  name: string,
+  type: 0 | 1,
+  actionTime?: Date,
+}
+
+// Information of the message
 export interface Message {
   id?: number,
   name: string,
@@ -9,6 +17,7 @@ export interface Message {
   createAt: Date,
 }
 
+// Information of the group chat
 export interface RoomChat {
   name: string,
   own: string,
@@ -17,24 +26,37 @@ export interface RoomChat {
 
 // Information per user with messages
 export interface ChatInfo {
-  type: number,
+  type: 0 | 1,
   name: string,
   profile_pic: string,
   online: boolean,
   moreMessage: boolean,
   page: number,
   offset: number,
-  messages: Message[],
+  read: boolean,
+  messages: Message[] | undefined,
   room_owner?: string,
   room_member?: string[],
 }
+
+const defaultChatInfo:ChatInfo = {
+  type: 0,
+  name: '',
+  profile_pic: '',
+  online: false,
+  read: true,
+  messages: undefined,
+  moreMessage: false,
+  page: 0,
+  offset: 0,
+};
 
 // Container of many ChatInfo
 export interface ChatData {
   userList: ChatInfo[],
 }
 
-export const initChatData: ChatData = {
+const initChatData: ChatData = {
   userList: [],
 };
 
@@ -43,39 +65,17 @@ const chatDataSlice = createSlice({
   initialState: initChatData,
   reducers: {
     // set user list to chat
-    setChatDataUsers: (state, action: PayloadAction<ChatInfo[]>) => {
-      state.userList = action.payload;
-    },
-    // add a chat data for person
-    addChatDataUser: (state, action: PayloadAction<string>) => {
-      state.userList.unshift({
-        messages: [],
-        type: 0,
-        name: action.payload,
-        offset: 0,
-        moreMessage: false,
-        profile_pic: '',
-        online: false,
-        page: 1
-      })
-    },
-    // add a chat data room
-    addChatDataRooms: (state, action: PayloadAction<RoomChat>) => {
-      state.userList.unshift({
-        room_owner: action.payload.name,
-        room_member: action.payload.userList,
-        messages: [],
-        type: 1,
-        name: action.payload.name,
-        offset: 0,
-        moreMessage: false,
-        profile_pic: '',
-        online: false,
-        page: 1
-      })
+    setChatDataUsers: (state, action: PayloadAction<UserInfo[]>) => {
+      while (state.userList.length > 0)
+        state.userList.shift();
+      action.payload.forEach((user) => state.userList.push({
+        ...defaultChatInfo,
+        name: user.name,
+        type: user.type,
+      }));
     },
     // update a chat data room
-    updateChatDataRooms: (state, action: PayloadAction<{ name:string, roomData: RoomChat }>) => {// first, find the user with the name
+    updateChatDataRooms: (state, action: PayloadAction<{ name: string, roomData: RoomChat }>) => {// first, find the user with the name
       const index = state.userList.findIndex((user) => user.name === action.payload.name);
       // if founded
       if (index >= 0) {
@@ -83,9 +83,8 @@ const chatDataSlice = createSlice({
           ...state.userList[index],
           room_owner: action.payload.roomData.own,
           room_member: action.payload.roomData.userList,
-        }
-      }
-      else {
+        };
+      } else {
         alert('Can\'t find the user list while status to list');
       }
     },
@@ -96,14 +95,13 @@ const chatDataSlice = createSlice({
       // if founded
       if (index >= 0) {
         if (state.userList[index].online !== action.payload.online)
-          state.userList[index].online = action.payload.online
-      }
-      else {
+          state.userList[index].online = action.payload.online;
+      } else {
         alert('Can\'t find the user list while status to list');
       }
     },
     // set messages to the list (only get call on startup)
-    setMessageListToChat: (state, action: PayloadAction<{ name: string, messages: Message[] }>) => {
+    setMessageListToChat: (state, action: PayloadAction<{ name: string, currentUsername: string, messages: Message[] }>) => {
       // first, find the user with the name
       const index = state.userList.findIndex((user) => user.name === action.payload.name);
       // if founded
@@ -113,6 +111,17 @@ const chatDataSlice = createSlice({
         state.userList[index].messages = action.payload.messages;
         state.userList[index].moreMessage = action.payload.messages.length >= 50;
         state.userList[index].offset = 0;
+        if (action.payload.messages.length > 0)
+        if ((
+          ((action.payload.messages[0].type === 1 && action.payload.messages[0].name !== action.payload.currentUsername && action.payload.messages[0].to === action.payload.name)
+          || (action.payload.messages[0].type === 0 && action.payload.messages[0].to === action.payload.currentUsername)) && state.userList[index].read)
+        ) {
+          // console.log("Hey unread this!", action.payload.name, 'as', action.payload.currentUsername)
+          const date = localStorage.getItem(`unseen_${action.payload.name}`);
+          if (!date || action.payload.messages[0].createAt > new Date(parseInt(date) - 7 * 3600 * 1000)) {
+            state.userList[index].read = false;
+          }
+        }
       } else {
         alert('Can\'t find the user list while add messages to list');
       }
@@ -130,7 +139,12 @@ const chatDataSlice = createSlice({
           action.payload.messages.shift();
         }
         //then append them and update page and check for more messages
-        state.userList[index].messages = state.userList[index].messages.concat(action.payload.messages);
+        if (state.userList[index].messages === undefined) {
+          state.userList[index].messages = action.payload.messages;
+        }
+        else {
+          state.userList[index].messages = state.userList[index].messages!.concat(action.payload.messages);
+        }
         state.userList[index].moreMessage = action.payload.messages.length > 0;
         state.userList[index].page = action.payload.page;
         state.userList[index].offset = 0;
@@ -145,17 +159,33 @@ const chatDataSlice = createSlice({
       const index = state.userList.findIndex((user) => user.name === receiver);
       // if founded
       if (index >= 0) {
+        if (!state.userList[index].messages)
+          state.userList[index].messages = [];
         // put new message in here
-        state.userList[index].messages.unshift({
+        state.userList[index].messages!.unshift({
           ...action.payload.message,
           createAt: new Date(action.payload.message.createAt),
         });
         // the offset for next GET_MESSAGE_FOR_NEXT_PAGE
         state.userList[index].offset++;
+        // If received message and already read, set it back to unread
+        if (action.payload.type === 'received' && state.userList[index].read)
+          state.userList[index].read = false;
         // put the chat data at the top of the list
-        const arr = state.userList.filter((user, i) => i !== index);
+        const arr = state.userList.filter((_user, i) => i !== index);
         arr.unshift(state.userList[index]);
         state.userList = arr;
+      } else {
+        alert('Can\'t find the user list while on received');
+      }
+    },
+    setReadStatus: (state, action: PayloadAction<{ name: string, seenStatus: boolean }>) => {
+      // first, find the user with the name
+      const index = state.userList.findIndex((user) => user.name === action.payload.name);
+      // if founded
+      if (index >= 0) {
+        // put new message in here
+        state.userList[index].read = action.payload.seenStatus;
       } else {
         alert('Can\'t find the user list while on received');
       }
@@ -170,6 +200,7 @@ export const {
   setChatDataUserOnline,
   setMessageListToChat,
   setUpdateNewMessage,
+  setReadStatus,
   appendMessageListToChat,
   updateChatDataRooms,
 } = chatDataSlice.actions;

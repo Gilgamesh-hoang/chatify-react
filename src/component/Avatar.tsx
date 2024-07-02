@@ -1,16 +1,17 @@
-import {PiUserCircle} from "react-icons/pi";
+import { PiKeyFill, PiUserCircle } from 'react-icons/pi';
 import React, {useMemo} from "react";
 import {HiMiniUserGroup} from "react-icons/hi2";
 
 interface AvatarProps {
     type: number;
     name: string;
-    imageUrl?: string;
     width: number;
     height: number;
+    imageUrl?: string;
+    owner?: boolean;
 }
 
-const Avatar: React.FC<AvatarProps> = ({type, name, imageUrl, width, height}) => {
+const Avatar: React.FC<AvatarProps> = ({type, name, imageUrl, width, height, owner}) => {
     const avatarName = useMemo(() => {
         if (!name) return '';
 
@@ -65,8 +66,10 @@ const Avatar: React.FC<AvatarProps> = ({type, name, imageUrl, width, height}) =>
     return (
         <div className={`text-slate-800  rounded-full font-bold relative`}
              style={{width: width + "px", height: height + "px"}}
+             title={name}
         >
             {renderAvatar()}
+            {owner && <div className={`absolute -bottom-0 -right-0 text-yellow-300`}><PiKeyFill width={width / 2} height={height / 2} /></div>}
         </div>
     );
 }

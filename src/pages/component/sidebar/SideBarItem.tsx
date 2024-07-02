@@ -2,7 +2,7 @@ import Avatar from '~/component/Avatar';
 import clsx from 'clsx';
 
 import { NavLink, useParams } from 'react-router-dom';
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { SideBarProp } from '~/model/SideBarProp';
 import { useDispatch, useSelector } from 'react-redux';
 import { chatDataSelector, socketSelector, userSelector } from '~/redux/selector';
@@ -11,7 +11,7 @@ import toast, { Toaster } from 'react-hot-toast';
 import { isCloudinaryURL, isValidURL } from '~/utils/linkUtil';
 import { CiImageOn, CiVideoOn } from 'react-icons/ci';
 import { AppDispatch } from '~/redux/store';
-import { setMessageListToChat, updateChatDataRooms } from '~/redux/chatDataSlice';
+import { setMessageListToChat, setReadStatus, updateChatDataRooms } from '~/redux/chatDataSlice';
 
 import languageUtil from '~/utils/languageUtil';
 
@@ -28,22 +28,12 @@ const SideBarItem: React.FC<SideBarProp> = (props) => {
   const user = useSelector(userSelector);
   //get socket from redux
   const socket: WebSocket | null = useSelector(socketSelector);
-  const unseenRef = useRef<boolean>(JSON.parse(localStorage.getItem(`unseen_${props.name}`) || 'false'));
   const timeRef = useRef<HTMLParagraphElement>(null);
 
   // get chat data info
   const dispatch = useDispatch<AppDispatch>();
   const chatData = useSelector(chatDataSelector);
   const chatInfo = chatData.userList.find((userInfo) => userInfo.name === props.name);
-
-
-  // const [unseen, setUnseen] = useState<boolean>(unseenRef.current);
-  useEffect(() => {
-    localStorage.setItem(
-      `unseen_${props.name}`,
-      JSON.stringify(unseenRef.current),
-    );
-  }, [unseenRef]);
 
   //boolean to stop stack tracing too much
   const getMessParams: SocketEvent = {
@@ -61,30 +51,25 @@ const SideBarItem: React.FC<SideBarProp> = (props) => {
     const data = JSON.parse(event.data);
     if (!(data.event === 'GET_PEOPLE_CHAT_MES' || data.event === 'GET_ROOM_CHAT_MES')) return;
     if (data.status === 'success') {
-      if (chatInfo === undefined) return;
-      if (chatInfo.messages.length > 0) return;
-      // Filter the messages for the current user.
-      let filteredMessages;
-      if (data.event === 'GET_ROOM_CHAT_MES')
-        filteredMessages = data.data.chatData.filter((message: LastMessage) => message.to === props.name);
-      else
-        filteredMessages = data.data.filter((message: LastMessage) => message.name === props.name || message.to === props.name);
-      // Check if there are any messages.
-      if (filteredMessages.length > 0) {
-        dispatch(setMessageListToChat({ name: props.name, messages: filteredMessages }));
-        if (props.type === 1) {
+      // Bypass update if messages exists (making sure sidebaritem only get message once)
+      if (chatInfo && chatInfo.messages && chatInfo.messages.length > 0) return;
+      if (data.event === 'GET_ROOM_CHAT_MES') {
+        dispatch(setMessageListToChat({ name: props.name, currentUsername: user.username, messages: data.data.chatData }));
+        // Room event can be filtered through room name
+        if (props.type === 1 && data.data.name === props.name) {
           const roomUserList: string[] = [];
           data.data.userList.forEach((user: { name: string; }) => roomUserList.push(user.name));
           dispatch(updateChatDataRooms({ name: props.name, roomData: { ...data.data, userList: roomUserList } }));
         }
-
-        // Check if the message is for the current user and it's unseen.
-        if (filteredMessages[0].to === user.username && !unseenRef.current) {
-          // Mark the message as seen.
-          unseenRef.current = true;
-          // Update the unseen status in localStorage.
-          localStorage.setItem(`unseen_${props.name}`, JSON.stringify(true));
+      }
+      else {
+        // Since individual messages can't do the same, it must be filtered
+        const filteredMessages = data.data.filter((message: LastMessage) => message.name === props.name || message.to === props.name);
+        // Check if there are any messages.
+        if (filteredMessages.length > 0) {
+          dispatch(setMessageListToChat({ name: props.name, currentUsername: user.username, messages: filteredMessages }));
         }
+
       }
     } else if (data.status === 'error') {
       toast.error('Error when get message', { duration: 2000 });
@@ -95,7 +80,7 @@ const SideBarItem: React.FC<SideBarProp> = (props) => {
   useEffect(() => {
     let timeout: NodeJS.Timeout;
     if (socket) {
-      if (chatInfo && chatInfo.messages.length === 0) {
+      if (chatInfo && !chatInfo.messages) {
         // Add the 'message' event listener and send the "GET_PEOPLE_CHAT_MES" event after 1 second.
         socket.addEventListener('message', handleMessage);
         // Create timeout to retrieve new message
@@ -103,7 +88,7 @@ const SideBarItem: React.FC<SideBarProp> = (props) => {
           if (socket.readyState === WebSocket.OPEN) {
             socket.send(JSON.stringify(getMessParams));
           }
-        }, 1000);
+        }, 50);
       }
     }
     // Remove the 'message' event listener when the component unmounts.
@@ -112,6 +97,7 @@ const SideBarItem: React.FC<SideBarProp> = (props) => {
       clearTimeout(timeout);
     };
   }, [socket, props]);
+
 
   const getTime = (message: LastMessage): string => {
     const currentDate = new Date();
@@ -129,19 +115,25 @@ const SideBarItem: React.FC<SideBarProp> = (props) => {
 
   useEffect(() => {
     if (timeRef.current)
-      timeRef.current.innerHTML = chatInfo && chatInfo.messages.length > 0 ? getTime(chatInfo.messages[0]) : '';
+      timeRef.current.innerHTML = chatInfo && chatInfo.messages && chatInfo.messages.length > 0 ? getTime(chatInfo.messages[0]) : '';
     const interval = setInterval(() => {
       if (timeRef.current)
-        timeRef.current.innerHTML = chatInfo && chatInfo.messages.length > 0 ? getTime(chatInfo.messages[0]) : '';
+        timeRef.current.innerHTML = chatInfo && chatInfo.messages && chatInfo.messages.length > 0 ? getTime(chatInfo.messages[0]) : '';
     }, 1000);
     return () => {
       clearInterval(interval);
     };
   }, [socket, chatInfo?.messages]);
 
+  useEffect(() => {
+    if (name && name === props.name) {
+      handleSeen();
+    }
+  }, [name]);
+
   const handleSeen = () => {
-    unseenRef.current = false;
-    localStorage.setItem(`unseen_${props.name}`, JSON.stringify(false));
+    dispatch(setReadStatus({name: props.name, seenStatus: true}))
+    localStorage.setItem(`unseen_${props.name}`, String(new Date().getTime()));
     // setUnseen(false);
   };
 
@@ -156,7 +148,7 @@ const SideBarItem: React.FC<SideBarProp> = (props) => {
     const message = isURL ? isImage ? 'Send image ' : isVideo ? 'Send video ' : mes : languageUtil.base64ToUtf8(mes);
 
     return (
-      <p className={clsx('overflow-hidden text-ellipsis whitespace-nowrap', { 'font-bold': unseenRef.current })}>
+      <p className={clsx('overflow-hidden text-ellipsis whitespace-nowrap', { 'font-bold': !chatInfo?.read })}>
         <span>{sender + message}</span>
         {isImage && <CiImageOn className="ml-1 size-4 inline" />}
         {isVideo && <CiVideoOn className="ml-1 size-4 inline" />}
@@ -183,8 +175,8 @@ const SideBarItem: React.FC<SideBarProp> = (props) => {
           <h3
             className={clsx(
               'text-ellipsis line-clamp-1 text-base whitespace-nowrap',
-              { 'font-normal': !unseenRef.current },
-              { 'font-bold': unseenRef.current },
+              { 'font-normal': chatInfo?.read },
+              { 'font-bold': !chatInfo?.read },
             )}
           >
             {props.name}
@@ -192,7 +184,7 @@ const SideBarItem: React.FC<SideBarProp> = (props) => {
 
           <div className="text-slate-500 text-xs items-center gap-1">
             {
-              chatInfo && chatInfo.messages.length > 0 && renderLastMess({ ...chatInfo.messages[0] })
+              chatInfo && chatInfo.messages && chatInfo.messages.length > 0 && renderLastMess({ ...chatInfo.messages[0] })
             }
           </div>
         </div>
@@ -201,7 +193,7 @@ const SideBarItem: React.FC<SideBarProp> = (props) => {
           <p className="text-xs mb-1.5 font-normal w-max text-right" ref={timeRef}>
           </p>
           <span className={clsx('w-2 h-2 flex justify-center items-center ml-auto bg-red-600 rounded-full ',
-            { invisible: !unseenRef.current })}></span>
+            { invisible: chatInfo?.read })}></span>
         </div>
       </NavLink>
     </>
