@@ -70,11 +70,12 @@ const SearchUser = ({ onClose }: { onClose: () => void }) => {
       const filtered = originalChat.filter((user) =>
         user.name.toLowerCase().includes(debouncedSearch.toLowerCase()),
       );
-      setSearchUser(filtered);
+      setSearchUser(filtered.slice(0, 6));
     }
     else {
-      setSearchUser(originalChat)
+      setSearchUser(originalChat.slice(0, 6))
     }
+    setLoading(false)
   }, [debouncedSearch]);
 
   // useEffect(() => {
@@ -92,7 +93,10 @@ const SearchUser = ({ onClose }: { onClose: () => void }) => {
             type="text"
             placeholder="Search user by name"
             className="w-full outline-none py-1 h-full px-4"
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              setLoading(true)
+            }}
             value={search}
           />
           <div className="h-14 w-14 flex justify-center items-center">

@@ -168,9 +168,8 @@ const chatDataSlice = createSlice({
         });
         // the offset for next GET_MESSAGE_FOR_NEXT_PAGE
         state.userList[index].offset++;
-        // If received message and already read, set it back to unread
-        if (action.payload.type === 'received' && state.userList[index].read)
-          state.userList[index].read = false;
+        // Set read status to state it received (sent success = read, received = haven't read)
+        state.userList[index].read = action.payload.type === 'sent';
         // put the chat data at the top of the list
         const arr = state.userList.filter((_user, i) => i !== index);
         arr.unshift(state.userList[index]);
