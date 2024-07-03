@@ -4,13 +4,15 @@ import clsx from 'clsx';
 import { NavLink, useParams } from 'react-router-dom';
 import React, { useEffect, useRef, useState } from 'react';
 import { SideBarProp } from '~/model/SideBarProp';
-import { useSelector } from 'react-redux';
-import { socketSelector, userSelector } from '~/redux/selector';
+import { useDispatch, useSelector } from 'react-redux';
+import { chatDataSelector, socketSelector, userSelector } from '~/redux/selector';
 import { SocketEvent } from '~/model/SocketEvent';
 import toast, { Toaster } from 'react-hot-toast';
 import { isCloudinaryURL, isValidURL } from '~/utils/linkUtil';
 import { CiImageOn, CiVideoOn } from 'react-icons/ci';
-import { fromAscii } from '~/pages/component/chatbox/MessageItem';
+import { AppDispatch } from '~/redux/store';
+import { setMessageListToChat, setReadStatus, updateChatDataRooms } from '~/redux/chatDataSlice';
+
 import languageUtil from '~/utils/languageUtil';
 
 interface LastMessage {
@@ -24,23 +26,14 @@ interface LastMessage {
 const SideBarItem: React.FC<SideBarProp> = (props) => {
   const { name } = useParams();
   const user = useSelector(userSelector);
-  const userName: string | null = localStorage.getItem('userName');
-  // const socket: WebSocket | null = useSelector((state: RootState) => state.app.socket.socket);
   //get socket from redux
   const socket: WebSocket | null = useSelector(socketSelector);
-  const [lastMessage, setLastMessage] = useState<LastMessage | null>(null);
-  const unseenRef = useRef<boolean>(
-    JSON.parse(localStorage.getItem(`unseen_${props.name}`) || 'false')
-  );
   const timeRef = useRef<HTMLParagraphElement>(null);
 
-  // const [unseen, setUnseen] = useState<boolean>(unseenRef.current);
-  useEffect(() => {
-    localStorage.setItem(
-      `unseen_${props.name}`,
-      JSON.stringify(unseenRef.current)
-    );
-  }, [unseenRef.current]);
+  // get chat data info
+  const dispatch = useDispatch<AppDispatch>();
+  const chatData = useSelector(chatDataSelector);
+  const chatInfo = chatData.userList.find((userInfo) => userInfo.name === props.name);
 
   //boolean to stop stack tracing too much
   const getMessParams: SocketEvent = {
@@ -56,110 +49,30 @@ const SideBarItem: React.FC<SideBarProp> = (props) => {
   // Define the handler for the 'message' event.
   const handleMessage = (event: MessageEvent) => {
     const data = JSON.parse(event.data);
-    if (
-      !(
-        data.event === 'GET_PEOPLE_CHAT_MES' ||
-        data.event === 'GET_ROOM_CHAT_MES'
-      )
-    )
-      return;
+    if (!(data.event === 'GET_PEOPLE_CHAT_MES' || data.event === 'GET_ROOM_CHAT_MES')) return;
     if (data.status === 'success') {
-      // console.log("SIDEBAR", props.name, "TRIGGERED GET_MES")
-      // Filter the messages for the current user.
-      let messages;
-      if (data.event === 'GET_ROOM_CHAT_MES')
-        messages = data.data.chatData.filter(
-          (message: LastMessage) => message.to === props.name
-        );
-      else
-        messages = data.data.filter(
-          (message: LastMessage) =>
-            message.name === props.name || message.to === props.name
-        );
-      // Check if there are any messages.
-      if (messages.length > 0) {
-        // Get the first message.
-        const lastMessageRef: LastMessage = messages[0];
-        // Update the `lastMessage` state with a new one when the new one is LATER than old one.
-        setLastMessage((prevLastMessage) => {
-          //on null, of course update with new one
-          if (prevLastMessage == null)
-            return {
-              ...lastMessageRef,
-              createAt: new Date(lastMessageRef.createAt),
-            };
-          //otherwise check it
-          return new Date(lastMessageRef.createAt) >
-            new Date(prevLastMessage?.createAt)
-            ? {
-                ...lastMessageRef,
-                createAt: new Date(lastMessageRef.createAt),
-              }
-            : prevLastMessage;
-        });
-
-        // Check if the message is for the current user and it's unseen.
-        if (lastMessageRef.to === userName && !unseenRef.current) {
-          // Mark the message as seen.
-          unseenRef.current = true;
-          // Update the unseen status in localStorage.
-          localStorage.setItem(`unseen_${props.name}`, JSON.stringify(true));
+      // Bypass update if messages exists (making sure sidebaritem only get message once)
+      if (chatInfo && chatInfo.messages && chatInfo.messages.length > 0) return;
+      if (data.event === 'GET_ROOM_CHAT_MES') {
+        dispatch(setMessageListToChat({ name: props.name, currentUsername: user.username, messages: data.data.chatData }));
+        // Room event can be filtered through room name
+        if (props.type === 1 && data.data.name === props.name) {
+          const roomUserList: string[] = [];
+          data.data.userList.forEach((user: { name: string; }) => roomUserList.push(user.name));
+          dispatch(updateChatDataRooms({ name: props.name, roomData: { ...data.data, userList: roomUserList } }));
         }
+      }
+      else {
+        // Since individual messages can't do the same, it must be filtered
+        const filteredMessages = data.data.filter((message: LastMessage) => message.name === props.name || message.to === props.name);
+        // Check if there are any messages.
+        if (filteredMessages.length > 0) {
+          dispatch(setMessageListToChat({ name: props.name, currentUsername: user.username, messages: filteredMessages }));
+        }
+
       }
     } else if (data.status === 'error') {
       toast.error('Error when get message', { duration: 2000 });
-    }
-  };
-  // Define the handler for the 'receive new message' AND 'send message' event.
-  const handleNewMessage = (event: MessageEvent) => {
-    const response = JSON.parse(event.data);
-    // Bypass the event response not SEND_CHAT or custom SEND_CHAT_SUCCESS
-    if (
-      !(
-        response.event === 'SEND_CHAT' || response.event === 'SEND_CHAT_SUCCESS'
-      )
-    )
-      return;
-    //The below function was the fake sync to reduce call to socket, HOWEVER the file + text combo sucks with
-    //this, big time, so uncomment this if you are confident to solve it
-    if (response.status === 'success') {
-      // Retrieve the message
-      const messageData: LastMessage = response.data;
-      // If it's a send chat success,...
-      if (
-        response.event === 'SEND_CHAT_SUCCESS' &&
-        response.data.to === props.name
-      ) {
-        console.log('SENT: ' + JSON.stringify(response.data));
-        // Update the `lastMessage` state. taken from event so no need to minus timezone
-        setLastMessage({
-          ...messageData,
-          createAt: new Date(response.data.createAt),
-        });
-        handleSeen();
-      } else if (response.event === 'SEND_CHAT') {
-        console.log('RECEIVED ' + JSON.stringify(response.data));
-        //if it's a room chat message, then redirect it using the 'to' otherwise check for 'name'
-        if (
-          (messageData.type === 1 && messageData.to === props.name) ||
-          (messageData.type === 0 && messageData.name === props.name)
-        ) {
-          // Update the `lastMessage` state. taken from Date.now() so need to minus timezone
-          setLastMessage({
-            ...messageData,
-            createAt: new Date(Date.now() - 7 * 3600 * 1000),
-          });
-          // Check if the message is for the current user and it's unseen.
-          if (messageData.to === userName && !unseenRef.current) {
-            // Mark the message as seen.
-            unseenRef.current = true;
-            // Update the unseen status in localStorage.
-            localStorage.setItem(`unseen_${props.name}`, JSON.stringify(true));
-          }
-        }
-      }
-    } else if (response.status === 'error') {
-      toast.error('Error when get received message', { duration: 2000 });
     }
   };
 
@@ -167,65 +80,60 @@ const SideBarItem: React.FC<SideBarProp> = (props) => {
   useEffect(() => {
     let timeout: NodeJS.Timeout;
     if (socket) {
-      // Add the 'message' event listener and send the "GET_PEOPLE_CHAT_MES" event after 1 second.
-      socket.addEventListener('message', handleMessage);
-      // Add the check for new message happens OR send message success
-      socket.addEventListener('message', handleNewMessage);
-      // Create timeout to retrieve new message
-      timeout = setTimeout(() => {
-        if (socket.readyState === WebSocket.OPEN)
-          socket.send(JSON.stringify(getMessParams));
-      }, 1000);
+      if (chatInfo && !chatInfo.messages) {
+        // Add the 'message' event listener and send the "GET_PEOPLE_CHAT_MES" event after 1 second.
+        socket.addEventListener('message', handleMessage);
+        // Create timeout to retrieve new message
+        timeout = setTimeout(() => {
+          if (socket.readyState === WebSocket.OPEN) {
+            socket.send(JSON.stringify(getMessParams));
+          }
+        }, 50);
+      }
     }
     // Remove the 'message' event listener when the component unmounts.
     return () => {
       socket?.removeEventListener('message', handleMessage);
-      socket?.removeEventListener('message', handleNewMessage);
       clearTimeout(timeout);
     };
-  }, [socket]);
+  }, [socket, props]);
+
 
   const getTime = (message: LastMessage): string => {
     const currentDate = new Date();
-    const TIMEZONE_OFFSET = 7; // GMT+7
-    // console.log('lastMessage.createAt', lastMessage.createAt)
-    const sameDay = message.createAt.getDate() === currentDate.getDate();
-    const sameYear =
-      message.createAt.getFullYear() === currentDate.getFullYear();
+    const deltaTime = currentDate.getTime() - 7 * 3600 * 1000 - message.createAt.getTime();
+    const year = (365.25 * 24 * 3600 * 1000), week = (7 * 24 * 3600 * 1000), day = 24 * 3600 * 1000, hour = 3600 * 1000,
+      minute = 60 * 1000;
+    // if delta is big for year, divide delta by year. Else go for week, day, hour and minute
+    return deltaTime > year ? Math.floor(deltaTime / year) + ' year' + (Math.floor(deltaTime / year) > 1 ? 's' : '') :
+      deltaTime > week ? Math.floor(deltaTime / week) + ' week' + (Math.floor(deltaTime / week) > 1 ? 's' : '') :
+        deltaTime > day ? Math.floor(deltaTime / day) + ' day' + (Math.floor(deltaTime / day) > 1 ? 's' : '') :
+          deltaTime > hour ? Math.floor(deltaTime / hour) + ' hour' + (Math.floor(deltaTime / hour) > 1 ? 's' : '') :
+            Math.floor(deltaTime / minute) + ' minute' + (Math.floor(deltaTime / minute) > 1 ? 's' : '');
 
-    return sameDay
-      ? // ...and if the current hour and the action time's hour are the same...
-        currentDate.getHours() -
-          TIMEZONE_OFFSET -
-          message.createAt.getHours() ===
-        0
-        ? // ...then set 'time' to the difference in minutes between the current time and the action time,
-          currentDate.getMinutes() - message.createAt.getMinutes() + ' min'
-        : // ...otherwise, set 'time' to the difference in hours between the current time and the action time,
-          currentDate.getHours() -
-          TIMEZONE_OFFSET -
-          message.createAt.getHours() +
-          ' hour'
-      : sameYear
-      ? //set 'time' to the action time's date and month.
-        message.createAt.getDate() + '/' + message.createAt.getMonth()
-      : // ...otherwise, set 'time' to the action time's month and year.
-        message.createAt.getMonth() + '/' + message.createAt.getFullYear();
   };
 
   useEffect(() => {
+    if (timeRef.current)
+      timeRef.current.innerHTML = chatInfo && chatInfo.messages && chatInfo.messages.length > 0 ? getTime(chatInfo.messages[0]) : '';
     const interval = setInterval(() => {
       if (timeRef.current)
-        timeRef.current.innerHTML = lastMessage ? getTime(lastMessage) : '';
+        timeRef.current.innerHTML = chatInfo && chatInfo.messages && chatInfo.messages.length > 0 ? getTime(chatInfo.messages[0]) : '';
     }, 1000);
     return () => {
       clearInterval(interval);
     };
-  }, [socket, lastMessage]);
+  }, [socket, chatInfo?.messages]);
+
+  useEffect(() => {
+    if (name && name === props.name) {
+      handleSeen();
+    }
+  }, [name]);
 
   const handleSeen = () => {
-    unseenRef.current = false;
-    localStorage.setItem(`unseen_${props.name}`, JSON.stringify(false));
+    dispatch(setReadStatus({name: props.name, seenStatus: true}))
+    localStorage.setItem(`unseen_${props.name}`, String(new Date().getTime()));
     // setUnseen(false);
   };
 
@@ -236,26 +144,11 @@ const SideBarItem: React.FC<SideBarProp> = (props) => {
     const isImage = cloudinaryURL?.isImage;
     const isVideo = cloudinaryURL?.isVideo;
     const sender =
-      lastMessage.name === userName
-        ? 'You: '
-        : lastMessage.type === 1
-        ? `${lastMessage.name}: `
-        : '';
-    const message = isURL
-      ? isImage
-        ? 'Send image '
-        : isVideo
-        ? 'Send video '
-        : mes
-      : fromAscii(mes);
+      lastMessage.name === user.username ? 'You: ' : lastMessage.type === 1 ? `${lastMessage.name}: ` : '';
+    const message = isURL ? isImage ? 'Send image ' : isVideo ? 'Send video ' : mes : languageUtil.base64ToUtf8(mes);
 
     return (
-      <p
-        className={clsx(
-          'overflow-hidden text-ellipsis whitespace-nowrap text-gray-950',
-          { 'font-bold': unseenRef.current }
-        )}
-      >
+      <p className={clsx('overflow-hidden text-ellipsis whitespace-nowrap', { 'font-bold': !chatInfo?.read })}>
         <span>{sender + message}</span>
         {isImage && <CiImageOn className="ml-1 size-4 inline" />}
         {isVideo && <CiVideoOn className="ml-1 size-4 inline" />}
@@ -272,39 +165,35 @@ const SideBarItem: React.FC<SideBarProp> = (props) => {
         onClick={handleSeen}
         className={clsx(
           'flex items-center gap-2 py-3 px-2 border border-transparent hover:border-primary rounded hover:bg-slate-100 cursor-pointer',
-          props.name == name ? 'bg-slate-200 ' : ''
+          props.name === name ? 'bg-slate-200 ' : '',
         )}
       >
-        <div>
+        <div className={''}>
           <Avatar type={props.type} width={40} height={40} name={props.name} />
         </div>
-        <div className={'lg:max-w-[200px]'}>
+        <div className={'min-w-0'}>
           <h3
             className={clsx(
               'text-ellipsis line-clamp-1 text-base whitespace-nowrap',
-              { 'font-normal': !unseenRef.current },
-              { 'font-bold': unseenRef.current }
+              { 'font-normal': chatInfo?.read },
+              { 'font-bold': !chatInfo?.read },
             )}
           >
             {props.name}
           </h3>
 
-          <div className="text-slate-500 text-xs flex items-center gap-1">
-            {lastMessage && renderLastMess(lastMessage)}
+          <div className="text-slate-500 text-xs items-center gap-1">
+            {
+              chatInfo && chatInfo.messages && chatInfo.messages.length > 0 && renderLastMess({ ...chatInfo.messages[0] })
+            }
           </div>
         </div>
 
         <div className="flex flex-col ml-auto">
-          <p
-            className="text-xs mb-1.5 font-normal w-max text-right"
-            ref={timeRef}
-          ></p>
-          <span
-            className={clsx(
-              'w-2 h-2 flex justify-center items-center ml-auto bg-red-600 rounded-full ',
-              { invisible: !unseenRef.current }
-            )}
-          ></span>
+          <p className="text-xs mb-1.5 font-normal w-max text-right" ref={timeRef}>
+          </p>
+          <span className={clsx('w-2 h-2 flex justify-center items-center ml-auto bg-red-600 rounded-full ',
+            { invisible: chatInfo?.read })}></span>
         </div>
       </NavLink>
     </>

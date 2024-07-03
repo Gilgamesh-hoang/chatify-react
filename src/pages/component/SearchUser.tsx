@@ -11,67 +11,78 @@ import { SocketEvent } from '~/model/SocketEvent';
 import { useDispatch, useSelector } from 'react-redux';
 import { AppDispatch } from '~/redux/store';
 import { socketSendMessage } from '~/redux/socketSlice';
-import { socketSelector } from '~/redux/selector';
+import { chatDataSelector, socketSelector } from '~/redux/selector';
+
 export interface UserSideBar {
   name: string;
   type: number;
 }
+
 const SearchUser = ({ onClose }: { onClose: () => void }) => {
   const [searchUser, setSearchUser] = useState<UserSideBar[]>([]);
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState('');
+  const chatData = useSelector(chatDataSelector);
 
   const [debouncedSearch] = useDebounce(search, 400);
   const dispatch = useDispatch<AppDispatch>();
   const socket = useSelector(socketSelector);
 
-  const fetchUserList = () => {
-    setLoading(true);
+  // const fetchUserList = () => {
+  //   setLoading(true);
+  //
+  //   const getUserListParams = {
+  //     action: 'onchat',
+  //     data: { event: 'GET_USER_LIST' },
+  //   };
+  //   socket.send(JSON.stringify(getUserListParams));
+  // };
 
-    const getUserListParams = {
-      action: 'onchat',
-      data: { event: 'GET_USER_LIST' },
-    };
-    socket.send(JSON.stringify(getUserListParams));
-  };
+  // const handleReceiveUserList = (e: MessageEvent) => {
+  //   const response = JSON.parse(e.data);
+  //   if (response.event === 'GET_USER_LIST') {
+  //     if (response.status === 'success') {
+  //       let userList: UserSideBar[] = response.data;
+  //       if (debouncedSearch) {
+  //         userList = userList.filter((user) =>
+  //           user.name.toLowerCase().includes(debouncedSearch.toLowerCase())
+  //         );
+  //       }
+  //       userList = userList.slice(0, 5);
+  //       setSearchUser(userList);
+  //     } else {
+  //       message.error('Failed to search user');
+  //     }
+  //     setLoading(false);
+  //   }
+  // };
 
-  const handleReceiveUserList = (e: MessageEvent) => {
-    const response = JSON.parse(e.data);
-    if (response.event === 'GET_USER_LIST') {
-      if (response.status === 'success') {
-        let userList: UserSideBar[] = response.data;
-        if (debouncedSearch) {
-          userList = userList.filter((user) =>
-            user.name.toLowerCase().includes(debouncedSearch.toLowerCase())
-          );
-        }
-        userList = userList.slice(0, 5);
-        setSearchUser(userList);
-      } else {
-        message.error('Failed to search user');
-      }
-      setLoading(false);
-    }
-  };
+  // useEffect(() => {
+  //   fetchUserList();
+  //   socket.addEventListener('message', handleReceiveUserList);
+  //   return () => {
+  //     socket.removeEventListener('message', handleReceiveUserList);
+  //   };
+  // }, []);
   useEffect(() => {
-    fetchUserList();
-    socket.addEventListener('message', handleReceiveUserList);
-    return () => {
-      socket.removeEventListener('message', handleReceiveUserList);
-    };
-  }, []);
-  useEffect(() => {
-    socket.addEventListener('message', handleReceiveUserList);
-    return () => {
-      socket.removeEventListener('message', handleReceiveUserList);
-    };
-  }, [debouncedSearch]);
-
-  useEffect(() => {
+    const originalChat = chatData.userList;
     if (debouncedSearch) {
-      fetchUserList();
+      const filtered = originalChat.filter((user) =>
+        user.name.toLowerCase().includes(debouncedSearch.toLowerCase()),
+      );
+      setSearchUser(filtered.slice(0, 6));
     }
+    else {
+      setSearchUser(originalChat.slice(0, 6))
+    }
+    setLoading(false)
   }, [debouncedSearch]);
+
+  // useEffect(() => {
+  //   if (debouncedSearch) {
+  //     fetchUserList();
+  //   }
+  // }, [debouncedSearch]);
 
   return (
     <div className="fixed top-0 bottom-0 left-0 right-0 bg-slate-700 bg-opacity-40 p-2 z-10">
@@ -82,7 +93,10 @@ const SearchUser = ({ onClose }: { onClose: () => void }) => {
             type="text"
             placeholder="Search user by name"
             className="w-full outline-none py-1 h-full px-4"
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              setLoading(true)
+            }}
             value={search}
           />
           <div className="h-14 w-14 flex justify-center items-center">

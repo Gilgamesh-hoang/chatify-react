@@ -1,16 +1,17 @@
-import {PiUserCircle} from "react-icons/pi";
+import { PiKeyDuotone, PiKeyFill, PiUserCircle } from 'react-icons/pi';
 import React, {useMemo} from "react";
 import {HiMiniUserGroup} from "react-icons/hi2";
 
 interface AvatarProps {
     type: number;
     name: string;
-    imageUrl?: string;
     width: number;
     height: number;
+    imageUrl?: string;
+    owner?: boolean;
 }
 
-const Avatar: React.FC<AvatarProps> = ({type, name, imageUrl, width, height}) => {
+const Avatar: React.FC<AvatarProps> = ({type, name, imageUrl, width, height, owner}) => {
     const avatarName = useMemo(() => {
         if (!name) return '';
 
@@ -29,7 +30,7 @@ const Avatar: React.FC<AvatarProps> = ({type, name, imageUrl, width, height}) =>
         // If the type prop is 'room', render a group icon.
         if (type == 1) {
             return (
-                <div className={`rounded-full flex justify-center items-center border-2 border-gray-700` }>
+                <div className="rounded-full flex justify-center items-center border-2 border-gray-700">
                     <HiMiniUserGroup size={width}/>
                 </div>
             );
@@ -51,7 +52,7 @@ const Avatar: React.FC<AvatarProps> = ({type, name, imageUrl, width, height}) =>
         else if (name) {
             return (
                 <div style={{width: width + "px", height: height + "px"}}
-                     className={`overflow-hidden rounded-full flex justify-center items-center text-lg bg-cyan-200`}>
+                     className="overflow-hidden rounded-full flex justify-center items-center text-lg bg-cyan-200">
                     {avatarName}
                 </div>
             );
@@ -63,10 +64,15 @@ const Avatar: React.FC<AvatarProps> = ({type, name, imageUrl, width, height}) =>
     };
 
     return (
-        <div className={`text-slate-800  rounded-full font-bold relative`}
+        <div className="text-slate-800  rounded-full font-bold relative"
              style={{width: width + "px", height: height + "px"}}
+             title={name.concat(owner ? " - Room owner" : "")}
         >
             {renderAvatar()}
+            {owner && <div className="absolute"
+                           style={{ bottom: `-${height / 10}px`, right: `-${width / 10 }px`, }} >
+                <PiKeyDuotone strokeWidth={0.25} size={width / 2} className='[&>[opacity="0.2"]]:fill-yellow-200 [&>[opacity="0.2"]]:opacity-100' />
+            </div>}
         </div>
     );
 }

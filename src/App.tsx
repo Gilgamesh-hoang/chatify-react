@@ -1,25 +1,20 @@
-import React, { useEffect, useLayoutEffect } from 'react';
+import React, { useEffect } from 'react';
 import './App.css';
 import { privateRoutes, publicRoutes, RouteType } from './router';
 import DefaultLayout from './layout/DefaultLayout';
-import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
+import { BrowserRouter as Router, Navigate, Route, Routes, useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
-import {
-  socketSelector,
-  socketStatusSelector,
-  userSelector,
-} from './redux/selector';
-import Login from './pages/Login';
-import { AppDispatch, RootState } from './redux/store';
+import { socketSelector, socketStatusSelector, userSelector, } from './redux/selector';
+import { AppDispatch, } from './redux/store';
 import { socketConnect, socketSendMessage } from './redux/socketSlice';
 import { SocketEvent } from './model/SocketEvent';
+import { message } from 'antd';
 
 function App() {
   const token = localStorage.getItem('token') ?? '';
   const userName = localStorage.getItem('userName') ?? '';
   const user = useSelector(userSelector);
   const dispatch = useDispatch<AppDispatch>();
-  // const socket = useSelector(socketSelector)
   const socket = useSelector(socketSelector);
   const statusSocket = useSelector(socketStatusSelector);
 
@@ -30,7 +25,7 @@ function App() {
 
   useEffect(() => {
     if (socket && statusSocket == 'open') {
-      if (token && userName && !user.username) {
+      if (token && userName) {
         const reloginParams: SocketEvent = {
           action: 'onchat',
           data: {
@@ -41,7 +36,7 @@ function App() {
             },
           },
         };
-        dispatch(socketSendMessage(reloginParams));
+        if (!user.username) dispatch(socketSendMessage(reloginParams));
       }
     }
   }, [statusSocket, socket]);
@@ -76,7 +71,7 @@ function App() {
             privateRoutes.map((routeObject, index: number) =>
               RouteRender(routeObject, index)
             )}
-          {/*<Route path="*" element={<Login />} />*/}
+          {/*<Route path="*" element={userName ? <Navigate to={'/'}/> : <Navigate to={'/login'} />} />*/}
         </Routes>
       </Router>
     </div>

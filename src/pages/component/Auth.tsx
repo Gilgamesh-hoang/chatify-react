@@ -27,7 +27,6 @@ type ActionType = 'LOGIN' | 'REGISTER';
 const Auth = ({ action }: { action: ActionType }) => {
   const navigate = useNavigate();
   const dispatch = useDispatch<AppDispatch>();
-  // const socket = useSelector(socketSelector);
   const socket = useSelector(socketSelector);
 
   const initialValues: LoginParams = {
@@ -76,7 +75,7 @@ const Auth = ({ action }: { action: ActionType }) => {
             dispatch(setUserName(values.username));
             message.success('Login successful');
             setTimeout(() => {
-              window.location.href = '/';
+              navigate('/');
             }, 200);
             break;
           case 'REGISTER':

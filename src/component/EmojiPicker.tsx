@@ -4,7 +4,7 @@ import Picker from '@emoji-mart/react';
 import data from '@emoji-mart/data';
 
 interface EmojiPickerProps {
-  inputRef: React.RefObject<HTMLInputElement>;
+  inputRef: React.RefObject<HTMLTextAreaElement>;
   isOpen?: boolean;
 }
 
