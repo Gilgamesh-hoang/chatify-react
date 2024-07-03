@@ -17,7 +17,7 @@ const isCloudinaryURL = (str: string): FileType | null => {
     const result = { isImage: false, isVideo: false };
     const extension = str.split('.').pop()?.toLowerCase();
     // extend is image
-    if (extension === 'png' || extension === 'jpg' || extension === 'jpeg' || extension === 'gif') {
+    if (extension === 'png' || extension === 'jpg' || extension === 'jpeg' || extension === 'gif' || extension === 'webp') {
       result.isImage = true;
       return result;
     } else if (extension === 'mp4' || extension === 'webm' || extension === 'ogg') {
