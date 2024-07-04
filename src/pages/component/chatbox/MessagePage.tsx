@@ -99,6 +99,12 @@ const MessagePage = () => {
     // Get the value from the input field
     const inputValue = inputRef.current?.value.trim();
 
+    // if inputValue have greater than 800 characters, don't send
+    if (inputValue && inputValue.length > 1000) {
+      toast.error('Message is too long', { duration: 2000 });
+      return;
+    }
+
     const createSocketEvent = (message: string): SocketEvent => ({
       action: 'onchat',
       data: {
