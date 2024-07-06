@@ -4,9 +4,9 @@ import Avatar from '~/component/Avatar';
 import { UserSideBar } from './SearchUser';
 
 const UserSearchCard = ({
-  user,
-  onClose,
-}: {
+                          user,
+                          onClose,
+                        }: {
   user: UserSideBar;
   onClose: () => void;
 }) => {

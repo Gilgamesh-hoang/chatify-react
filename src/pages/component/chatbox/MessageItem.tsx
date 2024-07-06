@@ -4,14 +4,17 @@ import { FileType } from '~/model/FileType';
 import imageError from '~/assets/image-error.png';
 import Avatar from '~/component/Avatar';
 import Tippy from '@tippyjs/react';
+import 'tippy.js/animations/shift-away.css';
 import 'tippy.js/dist/tippy.css';
+import 'tippy.js/themes/translucent.css';
 import FileDownload from '~/component/FileDownload';
 import React, { useState } from 'react';
 import languageUtil from '~/utils/languageUtil';
 import { Message } from '~/redux/chatDataSlice';
 import clsx from 'clsx';
-import { useSelector } from 'react-redux';
-import { chatDataSelector } from '~/redux/selector';
+import ChatUserMenu from '~/pages/component/chatbox/ChatUserMenu';
+import ChatInfoPopup from '~/pages/component/chatbox/ChatInfoPopup';
+import AddUser from '~/pages/component/AddUser';
 
 interface MessageItemProps {
   msg: Message;
@@ -22,7 +25,7 @@ interface MessageItemProps {
   roomOwner?: string;
 }
 
-const MessageItem: React.FC<MessageItemProps> = ({ msg, username, type, selected, querySearch, roomOwner}) => {
+const MessageItem: React.FC<MessageItemProps> = ({ msg, username, type, selected, querySearch, roomOwner }) => {
   const [isImageError, setImageError] = useState(false);
   const TIMEZONE_OFFSET = 7 * 3600 * 1000; //GMT+7
   const realCreateAt = new Date(
@@ -31,7 +34,7 @@ const MessageItem: React.FC<MessageItemProps> = ({ msg, username, type, selected
   const renderMessageContent = (mes: string) => {
     const msg = languageUtil.base64ToUtf8(mes);
     // split the strings with the search query included (case-insensitive + global)
-    const split = msg.split(new RegExp(`(${querySearch})`, 'gi'))
+    const split = msg.split(new RegExp(`(${querySearch})`, 'gi'));
     if (isValidURL(msg)) {
       const cloudinaryURL: FileType | null = isCloudinaryURL(msg);
       if (cloudinaryURL) {
@@ -46,8 +49,9 @@ const MessageItem: React.FC<MessageItemProps> = ({ msg, username, type, selected
             >
               <img
                 src={msg}
-                className="w-auto h-full max-h-[260px] sm:max-h-[300px] md:max-h-[280px] object-scale-down"
+                className="w-auto h-full min-h-[24px] max-h-[260px] sm:max-h-[300px] md:max-h-[280px] object-scale-down"
                 alt={msg}
+                loading="lazy"
                 onError={(e) => {
                   (e.target as HTMLImageElement).src = imageError;
                   setImageError(true);
@@ -60,7 +64,7 @@ const MessageItem: React.FC<MessageItemProps> = ({ msg, username, type, selected
             <video
               src={msg}
               controls
-              className="w-auto h-full max-h-[260px] sm:max-h-[300px] md:max-h-[280px] object-scale-down"
+              className="w-auto h-full min-h-[24px] max-h-[260px] sm:max-h-[300px] md:max-h-[280px] object-scale-down"
             />
           );
         }
@@ -70,8 +74,8 @@ const MessageItem: React.FC<MessageItemProps> = ({ msg, username, type, selected
             {
               // if there is query search, try to highlight the keywords. else render normal message
               querySearch ?
-              split.map((part, index) =>
-              <span key={index} className={part.toLowerCase() === querySearch.toLowerCase() ? 'bg-yellow-300' : '' }>
+                split.map((part, index) =>
+                  <span key={index} className={part.toLowerCase() === querySearch.toLowerCase() ? 'bg-yellow-300' : ''}>
               {part}</span>) : msg
             }
           </a>
@@ -82,36 +86,55 @@ const MessageItem: React.FC<MessageItemProps> = ({ msg, username, type, selected
         {
           // same thing here
           querySearch ?
-          split.map((part, index) =>
-          <span key={index} className={part.toLowerCase() === querySearch.toLowerCase() ? 'bg-yellow-300' : '' }>
+            split.map((part, index) =>
+              <span key={index} className={part.toLowerCase() === querySearch.toLowerCase() ? 'bg-yellow-300' : ''}>
               {part}</span>) : msg
         }
       </p>;
     }
   };
+  const [visible, setVisible] = useState(false);
+  const show = () => setVisible(true);
+  const hide = () => setVisible(false);
+  //for case popup
+  const [popup, setPopup] = useState(false);
+  const [addUser, setAddUser] = useState(false);
   //for case group
   const renderAvatar = () => {
     return (
-      <div className={'px-2'} title={msg.name}>
-        <Avatar width={35} height={35} type={0} name={msg.name} owner={msg.name === roomOwner} />
-      </div>
+      <Tippy placement="right-start"
+             content={<ChatUserMenu userName={msg.name} onClose={hide} onInfoClick={() => setPopup(true)}
+                                    onAddUser={() => setAddUser(true)} />}
+             interactive={true}
+             delay={[100, 100]}
+             animation={'shift-away'}
+             theme={'translucent'}
+             visible={visible}
+             onClickOutside={hide}
+      >
+        <div className='px-2 self-start' title={msg.name} onClick={visible ? hide : show}>
+          <Avatar width={35} height={35} type={0} name={msg.name} owner={msg.name === roomOwner} />
+        </div>
+      </Tippy>
     );
   };
   return (
-    <div className={'flex '}>
+    <div className={'flex'}>
       {type === 1 && msg.name !== username && renderAvatar()}
       <div className={clsx(` p-1 rounded w-fit max-w-[243px] md:max-w-sm lg:max-w-md`,
-          username === msg.name ? 'ml-auto bg-teal-100 max-w-[280px]' : 'bg-white',
+        username === msg.name ? 'ml-auto bg-teal-100 max-w-[280px]' : 'bg-white',
         selected && 'border-2 border-secondary p-[2.4px]')}>
         <div className="w-full relative">
           {renderMessageContent(msg.mes)}
         </div>
-        <p className={`px-1 text-xs w-fit ${username === msg.name ? 'ml-auto' : ''}`} >
+        <p className={`px-1 text-xs w-fit ${username === msg.name ? 'ml-auto' : ''}`}>
           {moment(realCreateAt).isSame(new Date(), 'day')
             ? moment(realCreateAt).format('HH:mm')
             : moment(realCreateAt).format('DD/MM/YYYY HH:mm')}
         </p>
       </div>
+      {popup && <ChatInfoPopup type={0} name={msg.name} onClose={() => setPopup(false)} />}
+      {addUser && <AddUser username={msg.name} onClose={() => setAddUser(false)} />}
     </div>
   );
 };

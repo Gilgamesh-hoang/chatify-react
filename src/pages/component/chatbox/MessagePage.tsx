@@ -1,4 +1,4 @@
-import React, { ChangeEvent, FormEvent, useEffect, useRef, useState } from 'react';
+import React, { ChangeEvent, FormEvent, useEffect, useMemo, useRef, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { HiDotsVertical } from 'react-icons/hi';
 import { FaAngleLeft } from 'react-icons/fa6';
@@ -9,7 +9,6 @@ import { Link, useParams } from 'react-router-dom';
 import Avatar from '~/component/Avatar';
 import backgroundImage from '~/assets/wallapaper.jpeg';
 import { chatDataSelector, socketSelector, userSelector } from '~/redux/selector';
-import Loading from '~/component/Loading';
 import uploadFile from '~/helper/uploadFile';
 import { SocketEvent } from '~/model/SocketEvent';
 import { AppDispatch } from '~/redux/store';
@@ -20,10 +19,12 @@ import MessageItem from '~/pages/component/chatbox/MessageItem';
 import EmojiPicker from '~/component/EmojiPicker';
 import { appendMessageListToChat, Message, setChatDataUserOnline, setUpdateNewMessage } from '~/redux/chatDataSlice';
 import languageUtil from '~/utils/languageUtil';
-import { IoChevronDown, IoChevronUp, IoClose, IoSearch } from 'react-icons/io5';
+import { IoChevronDown, IoChevronUp, IoClose, IoInformationCircle, IoSearch } from 'react-icons/io5';
 import clsx from 'clsx';
 import { isCloudinaryURL, isValidURL } from '~/utils/linkUtil';
 import MessageHeader from '~/pages/component/chatbox/MessageHeader';
+import Loading from '~/pages/component/Loading';
+import ChatInfoPopup from '~/pages/component/chatbox/ChatInfoPopup';
 
 interface FileUploadProps {
   isImage: boolean;
@@ -34,24 +35,24 @@ const MessagePage = () => {
   // try to set current chat
   const { type, name } = useParams();
   const currentChat = {
-    type: type === undefined ? 0 : (type === '1' ? 1 : 0),
+    type: type === undefined ? 1 : (type === '0' ? 0 : 1),
     name: name === undefined ? '' : name,
   };
 
   // all selector
   const user = useSelector(userSelector);
   const webSocket = useSelector(socketSelector);
-
   const [loading, setLoading] = useState(false);
-  const [loading2, setLoading2] = useState(true);
-  const currentMessage = useRef<HTMLDivElement>(null);
   const [selectedFile, setSelectedFile] = useState<FileUploadProps | null>(
     null,
   );
-
+  const currentMessage = useRef<HTMLDivElement>(null);
   // send message
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const submitRef = useRef<HTMLButtonElement>(null);
+  // for loading sections
+  const moreMessageButton = useRef<HTMLButtonElement>(null);
+  const moreMessageSpinner = useRef<HTMLDivElement>(null);
 
   // get chat data info
   const dispatch = useDispatch<AppDispatch>();
@@ -64,11 +65,9 @@ const MessagePage = () => {
   const [searchCursor, setSearchCursor] = useState(-1);
   const searchInput = useRef('');
   const searchFocus = useRef<HTMLDivElement>(null);
-  // for search input reset
-  const resetRef = useRef<HTMLButtonElement>(null);
-
-  const moreMessageButton = useRef<HTMLButtonElement>(null);
-  const moreMessageSpinner = useRef<HTMLDivElement>(null);
+  const searchResetBtn = useRef<HTMLButtonElement>(null);
+  // for show info
+  const [openInfo, setOpenInfo] = useState(false);
 
   // on 'type' and 'name' change (from click to other chat) or new last messages update, scroll to end automatically,
   useEffect(() => {
@@ -76,9 +75,11 @@ const MessagePage = () => {
     searchInput.current = '';
     setSearchResult([]);
     setSearchCursor(-1);
-    if (currentMessage.current)
-      currentMessage.current.scrollIntoView({ behavior: 'smooth', block: 'end' });
-  }, [type, name, chatLastMessage, currentMessage]);
+    currentMessage.current?.scrollIntoView({ behavior: 'auto', block: 'end' });
+    setTimeout(() => {
+      currentMessage.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
+    }, 500);
+  }, [type, name, chatLastMessage]);
 
   const handleUploadFile = async (): Promise<string | null> => {
     if (selectedFile) {
@@ -127,7 +128,7 @@ const MessagePage = () => {
         type: currentChat.type === 1 ? 1 : 0,
         name: user.username,
         to: currentChat.name,
-        mes: message,
+        mes: languageUtil.utf8ToBase64(message),
         createAt: new Date(Date.now() - 7 * 3600 * 1000),
       };
       dispatch(setUpdateNewMessage({ type: 'sent', message: messageSent }));
@@ -253,7 +254,7 @@ const MessagePage = () => {
 
     let interval: NodeJS.Timer;
     webSocket.addEventListener('message', handleStatusCheck);
-    if (webSocket) {
+    if (webSocket && currentChat.type === 0 && currentChat.name !== '' && currentChat.name !== user.username) {
       interval = setInterval(() => {
         if (webSocket.readyState === WebSocket.OPEN)
           webSocket.send(JSON.stringify(CHECK_USER_STATUS));
@@ -264,7 +265,7 @@ const MessagePage = () => {
       webSocket.removeEventListener('message', handleStatusCheck);
       clearInterval(interval);
     };
-  }, [webSocket, name, currentChat.name, dispatch]);
+  }, [webSocket, currentChat.name, currentChat.type]);
 
   // text area auto-size
   const handleSizeChange = (event: ChangeEvent<HTMLTextAreaElement>) => {
@@ -307,7 +308,7 @@ const MessagePage = () => {
   useEffect(() => {
     if (searchFocus.current)
       searchFocus.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
-  }, [searchResult, searchState, searchCursor]);
+  }, [searchState, searchCursor]);
 
   // on submit search, do the filter search
   const handleSearchSubmit = (evt: React.FormEvent<HTMLFormElement>) => {
@@ -320,43 +321,47 @@ const MessagePage = () => {
   // clear input and hide the reset button
   const handleResetVisible = (evt: ChangeEvent<HTMLInputElement>) => {
     const hasText = evt.currentTarget.value.trim().length === 0;
-    if (resetRef.current)
-      resetRef.current.hidden = hasText;
+    if (searchResetBtn.current)
+      searchResetBtn.current.hidden = hasText;
   };
-
   return (
     <>
       <Toaster position="top-center" reverseOrder={false} />
-      <div style={{ backgroundImage: `url(${backgroundImage})` }} className="bg-no-repeat bg-cover" key={name}>
+      <div style={{ backgroundImage: `url(${backgroundImage})` }} className="bg-no-repeat bg-cover relative" key={name}>
         <header className="sticky top-0 h-16 bg-white flex justify-between items-center px-4">
           <div className="flex items-center gap-4">
             <Link to={'/'} className="lg:hidden">
               <FaAngleLeft size={25} />
             </Link>
-            <div>
-              <Avatar
-                width={50}
-                height={50}
-                name={currentChat.name}
-                type={currentChat.type}
-              />
-            </div>
-            <div>
-              <h3 className="font-semibold text-lg my-0 text-ellipsis line-clamp-1">
-                {currentChat.name}
-              </h3>
-              <p className="-my-2 text-sm">
+            <div className="flex items-center gap-4 rounded-md cursor-pointer p-1.5 hover:bg-slate-200"
+                 onClick={() => setOpenInfo(true)}>
+              <div>
+                <Avatar
+                  width={44}
+                  height={44}
+                  name={currentChat.name}
+                  type={currentChat.type}
+                />
+              </div>
+              <div>
+                <h3 className="font-semibold text-lg my-0 text-ellipsis line-clamp-1">
+                  {currentChat.name}{currentChat.name === user.username && ' (you)'}
+                </h3>
                 {
-                  (chatInfo && chatInfo.online) ? <span className="text-primary">online</span> : (
-                    <span className="text-slate-400">offline</span>
-                  )}
-              </p>
+                  currentChat.name !== user.username && currentChat.type === 0 &&
+                  (<p className="-my-2 text-sm pb-2">
+                    {(chatInfo && chatInfo.online)
+                        ? (<span className="text-primary">online</span>)
+                        : (<span className="text-slate-400">offline</span>)}
+                  </p>)
+                }
+              </div>
             </div>
           </div>
 
           <div className="flex gap-3">
-            <button className="cursor-pointer hover:text-primary">
-              <IoSearch onClick={() => setSearchState(!searchState)} />
+            <button className="cursor-pointer hover:text-primary" onClick={() => setSearchState(!searchState)}>
+              <IoSearch />
             </button>
             <button className="cursor-pointer hover:text-primary">
               <HiDotsVertical />
@@ -371,11 +376,11 @@ const MessagePage = () => {
               {/*search input*/}
               <form className="h-full grow flex gap-2 items-center " onSubmit={handleSearchSubmit}
                     onReset={() => {
-                      if (resetRef.current) resetRef.current.hidden = true;
+                      if (searchResetBtn.current) searchResetBtn.current.hidden = true;
                     }}>
                 <input type="text" placeholder="Search here..." className="py-1 px-4 outline-none w-full h-fit"
                        onChange={handleResetVisible} />
-                <button type="reset" ref={resetRef} hidden><IoClose size={20} className="text-secondary" /></button>
+                <button type="reset" ref={searchResetBtn} hidden><IoClose size={20} className="text-secondary" /></button>
                 <button type="submit" className="text-primary hover:text-secondary">
                   <IoSearch size={24} />
                 </button>
@@ -410,7 +415,7 @@ const MessagePage = () => {
 
         {/***show all messages */}
         <section
-          className={clsx(`h-[calc(100vh-128px)] overflow-x-hidden overflow-y-scroll scrollbar relative bg-slate-200 bg-opacity-50`,
+          className={clsx(`h-[calc(100vh-128px)] overflow-x-hidden overflow-y-scroll scrollbar relative bg-slate-200 bg-opacity-50 `,
             searchState && 'h-[calc(100vh-128px-3rem)]')}>
           {/**all messages show here, note: it's in reverse order aka the elements are place upward */}
           <div className="flex flex-col-reverse justify-end gap-2 py-2 mx-2 min-h-full" ref={currentMessage}>
@@ -433,10 +438,12 @@ const MessagePage = () => {
             {/*load more message ui*/}
             {
               chatInfo && chatInfo.moreMessage &&
-              <button className={'p-4 bg-cyan-200 bg-opacity-75 flex justify-center items-center disabled:bg-white mt-auto'}
-                      onClick={loadMoreMessage}
-                      ref={moreMessageButton}>
-                <div className="px-2" hidden ref={moreMessageSpinner}><Loading /></div>Read more messages...
+              <button
+                className={'p-4 bg-cyan-200 bg-opacity-75 flex justify-center items-center disabled:bg-white mt-auto'}
+                onClick={loadMoreMessage}
+                ref={moreMessageButton}>
+                <div className="px-2" hidden ref={moreMessageSpinner}><Loading /></div>
+                Read more messages...
               </button>
             }
             {/*Loading...*/}
@@ -446,7 +453,8 @@ const MessagePage = () => {
             {/*No more message show this*/}
             {
               chatInfo && chatInfo.messages && (chatInfo.messages.length === 0 || !chatInfo.moreMessage) &&
-              <MessageHeader key={name} name={chatInfo.name} type={chatInfo.type} owner={chatInfo.room_owner} members={chatInfo.room_member} />
+              <MessageHeader key={name} name={chatInfo.name} type={chatInfo.type} owner={chatInfo.room_owner}
+                             members={chatInfo.room_member} />
             }
           </div>
 
@@ -456,7 +464,7 @@ const MessagePage = () => {
           )}
 
           {loading && (
-            <div className="w-full h-full flex sticky bottom-0 justify-center items-center bg-black bg-opacity-50">
+            <div className="w-full h-screen flex sticky bottom-0 justify-center items-center bg-black bg-opacity-50">
               <Loading />
             </div>
           )}
@@ -494,7 +502,15 @@ const MessagePage = () => {
             </button>
           </form>
         </section>
+        {
+          !chatInfo && <div className="absolute w-full top-0 bottom-0 bg-slate-300 bg-opacity-75 flex justify-center items-center">
+            <div className="text-xl"><Loading /></div>
+          </div>
+        }
       </div>
+      {
+        openInfo && <ChatInfoPopup onClose={() => setOpenInfo(false)} {...chatInfo!} />
+      }
     </>
   );
 };

@@ -30,6 +30,7 @@ export interface ChatInfo {
   name: string,
   profile_pic: string,
   online: boolean,
+  actionTime: Date | undefined,
   moreMessage: boolean,
   page: number,
   offset: number,
@@ -44,6 +45,7 @@ const defaultChatInfo:ChatInfo = {
   name: '',
   profile_pic: '',
   online: false,
+  actionTime: undefined,
   read: true,
   messages: undefined,
   moreMessage: false,
@@ -72,6 +74,7 @@ const chatDataSlice = createSlice({
         ...defaultChatInfo,
         name: user.name,
         type: user.type,
+        actionTime: user.actionTime,
       }));
     },
     // update a chat data room
@@ -85,7 +88,7 @@ const chatDataSlice = createSlice({
           room_member: action.payload.roomData.userList,
         };
       } else {
-        alert('Can\'t find the user list while status to list');
+        console.log('Can\'t find the user/room while set room data');
       }
     },
     // set online user
@@ -97,7 +100,7 @@ const chatDataSlice = createSlice({
         if (state.userList[index].online !== action.payload.online)
           state.userList[index].online = action.payload.online;
       } else {
-        alert('Can\'t find the user list while status to list');
+        alert('Can\'t find the user while set status');
       }
     },
     // set messages to the list (only get call on startup)
@@ -112,8 +115,8 @@ const chatDataSlice = createSlice({
         state.userList[index].moreMessage = action.payload.messages.length >= 50;
         state.userList[index].offset = 0;
         if (action.payload.messages.length > 0)
-        if ((
-          ((action.payload.messages[0].type === 1 && action.payload.messages[0].name !== action.payload.currentUsername && action.payload.messages[0].to === action.payload.name)
+        if (action.payload.name !== action.payload.currentUsername &&
+          (((action.payload.messages[0].type === 1 && action.payload.messages[0].name !== action.payload.currentUsername && action.payload.messages[0].to === action.payload.name)
           || (action.payload.messages[0].type === 0 && action.payload.messages[0].to === action.payload.currentUsername)) && state.userList[index].read)
         ) {
           // console.log("Hey unread this!", action.payload.name, 'as', action.payload.currentUsername)
@@ -123,7 +126,7 @@ const chatDataSlice = createSlice({
           }
         }
       } else {
-        alert('Can\'t find the user list while add messages to list');
+        console.log('Can\'t find the user list while add messages to list');
       }
     },
     // append messages to the list
@@ -175,7 +178,13 @@ const chatDataSlice = createSlice({
         arr.unshift(state.userList[index]);
         state.userList = arr;
       } else {
-        alert('Can\'t find the user list while on received');
+        console.log('Adding data for', receiver);
+        state.userList.unshift({
+          ...defaultChatInfo,
+          name: receiver,
+          type: action.payload.message.type,
+          actionTime: new Date(Date.now() - 7 * 3600 * 1000),
+        });
       }
     },
     setReadStatus: (state, action: PayloadAction<{ name: string, seenStatus: boolean }>) => {
