@@ -1,4 +1,4 @@
-import React, { ChangeEvent, FormEvent, useEffect, useMemo, useRef, useState } from 'react';
+import React, { ChangeEvent, FormEvent, useEffect, useRef, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { HiDotsVertical } from 'react-icons/hi';
 import { FaAngleLeft } from 'react-icons/fa6';
@@ -19,7 +19,7 @@ import MessageItem from '~/pages/component/chatbox/MessageItem';
 import EmojiPicker from '~/component/EmojiPicker';
 import { appendMessageListToChat, Message, setChatDataUserOnline, setUpdateNewMessage } from '~/redux/chatDataSlice';
 import languageUtil from '~/utils/languageUtil';
-import { IoChevronDown, IoChevronUp, IoClose, IoInformationCircle, IoSearch } from 'react-icons/io5';
+import { IoChevronDown, IoChevronUp, IoClose, IoSearch } from 'react-icons/io5';
 import clsx from 'clsx';
 import { isCloudinaryURL, isValidURL } from '~/utils/linkUtil';
 import MessageHeader from '~/pages/component/chatbox/MessageHeader';
@@ -58,7 +58,7 @@ const MessagePage = () => {
   const dispatch = useDispatch<AppDispatch>();
   const chatData = useSelector(chatDataSelector);
   const chatInfo = chatData.userList.find((userInfo) => userInfo.name === name);
-  const chatLastMessage = chatInfo && chatInfo.messages && chatInfo.messages.length > 0 ? chatInfo.messages[0] : null;
+  const chatLatestMessage = chatInfo && chatInfo.messages && chatInfo.messages.length > 0 ? chatInfo.messages[0] : null;
   // for searching purposes only
   const [searchState, setSearchState] = useState(false);
   const [searchResult, setSearchResult] = useState<number[]>([]);
@@ -69,17 +69,14 @@ const MessagePage = () => {
   // for show info
   const [openInfo, setOpenInfo] = useState(false);
 
+
   // on 'type' and 'name' change (from click to other chat) or new last messages update, scroll to end automatically,
   useEffect(() => {
     // reset search data
     searchInput.current = '';
     setSearchResult([]);
     setSearchCursor(-1);
-    currentMessage.current?.scrollIntoView({ behavior: 'auto', block: 'end' });
-    setTimeout(() => {
-      currentMessage.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
-    }, 500);
-  }, [type, name, chatLastMessage]);
+  }, [type, name,]);
 
   const handleUploadFile = async (): Promise<string | null> => {
     if (selectedFile) {
@@ -191,6 +188,7 @@ const MessagePage = () => {
         const messageData: Message[] = response.event === 'GET_ROOM_CHAT_MES' ? response.data.chatData : response.data;
         //filter it to get the desired chat for user/group
         const filteredMessages = messageData.filter((message: Message) => (response.event !== 'GET_ROOM_CHAT_MES' && message.name === currentChat.name) || message.to === currentChat.name);
+
         //and set the preferred chat to the screen
         dispatch(appendMessageListToChat({
           name: currentChat.name,
@@ -310,6 +308,13 @@ const MessagePage = () => {
       searchFocus.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
   }, [searchState, searchCursor]);
 
+  useEffect(() => {
+    currentMessage.current?.scrollIntoView({ behavior: 'auto', block: 'end' });
+    setTimeout(() => {
+      currentMessage.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
+    }, 500);
+  }, [chatLatestMessage])
+
   // on submit search, do the filter search
   const handleSearchSubmit = (evt: React.FormEvent<HTMLFormElement>) => {
     evt.preventDefault();
@@ -351,8 +356,8 @@ const MessagePage = () => {
                   currentChat.name !== user.username && currentChat.type === 0 &&
                   (<p className="-my-2 text-sm pb-2">
                     {(chatInfo && chatInfo.online)
-                        ? (<span className="text-primary">online</span>)
-                        : (<span className="text-slate-400">offline</span>)}
+                      ? (<span className="text-primary">online</span>)
+                      : (<span className="text-slate-400">offline</span>)}
                   </p>)
                 }
               </div>
@@ -420,7 +425,8 @@ const MessagePage = () => {
           {/**all messages show here, note: it's in reverse order aka the elements are place upward */}
           <div className="flex flex-col-reverse justify-end gap-2 py-2 mx-2 min-h-full" ref={currentMessage}>
             {
-              chatInfo && chatInfo.messages && chatInfo.messages.length > 0 && chatInfo.messages.map((msg: Message, index: number) => {
+              chatInfo && chatInfo.messages && chatInfo.messages.length > 0 &&
+              chatInfo.messages.map((msg: Message, index: number) => {
                   const isSelected = searchState && searchResult[searchCursor] === index;
                   return (<div ref={isSelected ? searchFocus : undefined}>
                     <MessageItem key={index}
@@ -503,7 +509,8 @@ const MessagePage = () => {
           </form>
         </section>
         {
-          !chatInfo && <div className="absolute w-full top-0 bottom-0 bg-slate-300 bg-opacity-75 flex justify-center items-center">
+          !chatInfo &&
+          <div className="absolute w-full top-0 bottom-0 bg-slate-300 bg-opacity-75 flex justify-center items-center">
             <div className="text-xl"><Loading /></div>
           </div>
         }
