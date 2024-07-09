@@ -400,13 +400,13 @@ const MessagePage = () => {
 
               {/*Next founded message*/}
               <button disabled={searchCursor >= searchResult.length - 1} className="disabled:text-gray-400"
-                      onClick={() => setSearchCursor(searchCursor + 1)} title="Next founded message">
+                      onClick={() => setSearchCursor((prev)=>prev + 1)} title="Next founded message">
                 <IoChevronUp size={24} />
               </button>
 
               {/*Prev founded message*/}
               <button disabled={searchCursor <= 0} className="disabled:text-gray-400"
-                      onClick={() => setSearchCursor(searchCursor - 1)} title="Previous founded message">
+                      onClick={() => setSearchCursor((prev)=>prev - 1)} title="Previous founded message">
                 <IoChevronDown size={24} />
               </button>
 
