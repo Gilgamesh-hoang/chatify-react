@@ -26,9 +26,7 @@ const rootReducer = combineReducers({
 });
 
 export const store = configureStore({
-    reducer: {
-        app: rootReducer,
-    },
+    reducer: { app: rootReducer, },
     middleware: (getDefaultMiddleware) =>
         getDefaultMiddleware().concat(websocketMiddleware),
 });

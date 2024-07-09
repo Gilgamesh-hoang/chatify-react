@@ -1,7 +1,7 @@
-import React, { MouseEvent, useState } from 'react';
+import React, { useState } from 'react';
 import { IoChatbubbleEllipses, IoClose } from 'react-icons/io5';
 import { useSelector } from 'react-redux';
-import { chatDataSelector, socketSelector, userSelector } from '~/redux/selector';
+import { chatDataSelector, userSelector } from '~/redux/selector';
 import Avatar from '~/component/Avatar';
 import ChatUserCard from '~/pages/component/chatbox/ChatUserCard';
 import { MdRunningWithErrors } from 'react-icons/md';
@@ -53,6 +53,7 @@ const ChatInfoPopup: React.FC<InfoProps> = (props) => {
             <IoClose />
           </button>
         </div>
+        {/*header*/}
         <div className="flex items-center">
           <Avatar type={props.type} name={props.name} width={60} height={60} />
           <div className="pl-5 ">
@@ -68,7 +69,9 @@ const ChatInfoPopup: React.FC<InfoProps> = (props) => {
           }
         </div>
         <hr />
+        {/*body*/}
         <div className="w-full h-full overflow-y-auto flex flex-col gap-2">
+          {/*Room owner */}
           {
             props.type === 1 && (<>
               <span>Room owner</span>
@@ -78,10 +81,11 @@ const ChatInfoPopup: React.FC<InfoProps> = (props) => {
                             isRoomOwner={true} />
             </>)
           }
+          {/*Members title OR Related chat title*/}
           {
             props.type === 1 ? <span>Members info ({props.room_member?.length})</span> : <span>Related room chat ({relatedRoomChat.length})</span>
           }
-          <div className="relative">
+          <div className="relative h-full">
             <div className="sm:grid sm:grid-cols-2 lg:grid-cols-3">
               {
                 props.type === 1

@@ -100,7 +100,7 @@ const chatDataSlice = createSlice({
         if (state.userList[index].online !== action.payload.online)
           state.userList[index].online = action.payload.online;
       } else {
-        alert('Can\'t find the user while set status');
+        console.log('Can\'t find the user while set status');
       }
     },
     // set messages to the list (only get call on startup)
@@ -154,7 +154,7 @@ const chatDataSlice = createSlice({
         state.userList[index].page = action.payload.page;
         state.userList[index].offset = 0;
       } else {
-        alert('Can\'t find the user list while add messages to list');
+        console.log('Can\'t find the user list while add messages to list');
       }
     },
     // on received or sent message, do the classic
@@ -197,7 +197,7 @@ const chatDataSlice = createSlice({
         // put new message in here
         state.userList[index].read = action.payload.seenStatus;
       } else {
-        alert('Can\'t find the user list while on received');
+        console.log('Can\'t find the user list while on received');
       }
     },
   },
