@@ -85,7 +85,7 @@ const ChatInfoPopup: React.FC<InfoProps> = (props) => {
           {
             props.type === 1 ? <span>Members info ({props.room_member?.length})</span> : <span>Related room chat ({relatedRoomChat.length})</span>
           }
-          <div className="relative h-full">
+          <div className="relative ">
             <div className="sm:grid sm:grid-cols-2 lg:grid-cols-3">
               {
                 props.type === 1
@@ -100,7 +100,7 @@ const ChatInfoPopup: React.FC<InfoProps> = (props) => {
             {
               props.type === 0 && relatedRoomChat.length === 0 &&
               <div
-                className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center text-slate-400">
+                className="flex flex-col items-center h-full text-slate-400">
                 <MdRunningWithErrors size={70} />
                 <span>No related room chat founded!</span>
               </div>
@@ -108,7 +108,7 @@ const ChatInfoPopup: React.FC<InfoProps> = (props) => {
             {
               props.type === 1 && props.room_member?.length === 0 &&
               <div
-                className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center text-slate-400">
+                className=" h-full flex flex-col items-center text-slate-400">
                 <MdRunningWithErrors size={70} />
                 <span>No other members founded in room chat!</span>
               </div>
@@ -119,8 +119,8 @@ const ChatInfoPopup: React.FC<InfoProps> = (props) => {
             (
               <>
                 <span>User chat ({chatUsernameList.length})</span>
-                <div className="relative">
-                  <div className="max-h-full sm:grid sm:grid-cols-2 lg:grid-cols-3">
+                <div className=" ">
+                  <div className="sm:grid sm:grid-cols-2 lg:grid-cols-3">
                     {
                       chatUserList.map((chatInfo, index) =>
                         <ChatUserCard key={index} name={chatInfo.name} type={0}
@@ -130,7 +130,7 @@ const ChatInfoPopup: React.FC<InfoProps> = (props) => {
                   {
                     chatUserList.length === 0 &&
                     <div
-                      className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center text-slate-400">
+                      className=" h-full flex flex-col items-center text-slate-400">
                       <MdRunningWithErrors size={70} />
                       <span>You currently have no user to chat!</span>
                     </div>
