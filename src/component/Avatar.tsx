@@ -30,7 +30,7 @@ const Avatar: React.FC<AvatarProps> = ({type, name, imageUrl, width, height, own
         // If the type prop is 'room', render a group icon.
         if (type == 1) {
             return (
-                <div className="rounded-full flex justify-center items-center border-2 border-gray-700">
+                <div style={{width: width + "px", height: height + "px"}} className="rounded-full flex justify-center items-center border-2 border-gray-700">
                     <HiMiniUserGroup size={width}/>
                 </div>
             );
@@ -51,8 +51,8 @@ const Avatar: React.FC<AvatarProps> = ({type, name, imageUrl, width, height, own
         // If a name prop is provided but no imageUrl, render a div with the initials of the name.
         else if (name) {
             return (
-                <div style={{width: width + "px", height: height + "px"}}
-                     className="overflow-hidden rounded-full flex justify-center items-center text-lg bg-cyan-200">
+                <div style={{width: width + "px", height: height + "px", fontSize: width / 2 + "px"}}
+                     className="overflow-hidden rounded-full flex justify-center items-center bg-cyan-200">
                     {avatarName}
                 </div>
             );

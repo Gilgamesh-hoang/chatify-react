@@ -30,6 +30,7 @@ export interface ChatInfo {
   name: string,
   profile_pic: string,
   online: boolean,
+  actionTime: Date | undefined,
   moreMessage: boolean,
   page: number,
   offset: number,
@@ -39,11 +40,12 @@ export interface ChatInfo {
   room_member?: string[],
 }
 
-const defaultChatInfo:ChatInfo = {
+const defaultChatInfo: ChatInfo = {
   type: 0,
   name: '',
   profile_pic: '',
   online: false,
+  actionTime: undefined,
   read: true,
   messages: undefined,
   moreMessage: false,
@@ -72,6 +74,7 @@ const chatDataSlice = createSlice({
         ...defaultChatInfo,
         name: user.name,
         type: user.type,
+        actionTime: user.actionTime,
       }));
     },
     // update a chat data room
@@ -85,7 +88,7 @@ const chatDataSlice = createSlice({
           room_member: action.payload.roomData.userList,
         };
       } else {
-        alert('Can\'t find the user list while status to list');
+        console.log('Can\'t find the user/room while set room data');
       }
     },
     // set online user
@@ -97,11 +100,15 @@ const chatDataSlice = createSlice({
         if (state.userList[index].online !== action.payload.online)
           state.userList[index].online = action.payload.online;
       } else {
-        alert('Can\'t find the user list while status to list');
+        alert('Can\'t find the user while set status');
       }
     },
     // set messages to the list (only get call on startup)
-    setMessageListToChat: (state, action: PayloadAction<{ name: string, currentUsername: string, messages: Message[] }>) => {
+    setMessageListToChat: (state, action: PayloadAction<{
+      name: string,
+      currentUsername: string,
+      messages: Message[]
+    }>) => {
       // first, find the user with the name
       const index = state.userList.findIndex((user) => user.name === action.payload.name);
       // if founded
@@ -112,18 +119,18 @@ const chatDataSlice = createSlice({
         state.userList[index].moreMessage = action.payload.messages.length >= 50;
         state.userList[index].offset = 0;
         if (action.payload.messages.length > 0)
-        if ((
-          ((action.payload.messages[0].type === 1 && action.payload.messages[0].name !== action.payload.currentUsername && action.payload.messages[0].to === action.payload.name)
-          || (action.payload.messages[0].type === 0 && action.payload.messages[0].to === action.payload.currentUsername)) && state.userList[index].read)
-        ) {
-          // console.log("Hey unread this!", action.payload.name, 'as', action.payload.currentUsername)
-          const date = localStorage.getItem(`unseen_${action.payload.name}`);
-          if (!date || action.payload.messages[0].createAt > new Date(parseInt(date) - 7 * 3600 * 1000)) {
-            state.userList[index].read = false;
+          if (action.payload.name !== action.payload.currentUsername &&
+            (((action.payload.messages[0].type === 1 && action.payload.messages[0].name !== action.payload.currentUsername && action.payload.messages[0].to === action.payload.name)
+              || (action.payload.messages[0].type === 0 && action.payload.messages[0].to === action.payload.currentUsername)) && state.userList[index].read)
+          ) {
+            // console.log("Hey unread this!", action.payload.name, 'as', action.payload.currentUsername)
+            const date = localStorage.getItem(`unseen_${action.payload.name}`);
+            if (!date || action.payload.messages[0].createAt > new Date(parseInt(date) - 7 * 3600 * 1000)) {
+              state.userList[index].read = false;
+            }
           }
-        }
       } else {
-        alert('Can\'t find the user list while add messages to list');
+        console.log('Can\'t find the user list while add messages to list');
       }
     },
     // append messages to the list
@@ -141,8 +148,7 @@ const chatDataSlice = createSlice({
         //then append them and update page and check for more messages
         if (state.userList[index].messages === undefined) {
           state.userList[index].messages = action.payload.messages;
-        }
-        else {
+        } else {
           state.userList[index].messages = state.userList[index].messages!.concat(action.payload.messages);
         }
         state.userList[index].moreMessage = action.payload.messages.length > 0;
@@ -159,23 +165,29 @@ const chatDataSlice = createSlice({
       const index = state.userList.findIndex((user) => user.name === receiver);
       // if founded
       if (index >= 0) {
-        if (!state.userList[index].messages)
-          state.userList[index].messages = [];
-        // put new message in here
-        state.userList[index].messages!.unshift({
-          ...action.payload.message,
-          createAt: new Date(action.payload.message.createAt),
-        });
-        // the offset for next GET_MESSAGE_FOR_NEXT_PAGE
-        state.userList[index].offset++;
-        // Set read status to state it received (sent success = read, received = haven't read)
-        state.userList[index].read = action.payload.type === 'sent';
         // put the chat data at the top of the list
         const arr = state.userList.filter((_user, i) => i !== index);
         arr.unshift(state.userList[index]);
         state.userList = arr;
+        if (!state.userList[0].messages)
+          state.userList[0].messages = [];
+        // put new message in here
+        state.userList[0].messages!.unshift({
+          ...action.payload.message,
+          createAt: new Date(action.payload.message.createAt),
+        });
+        // the offset for next GET_MESSAGE_FOR_NEXT_PAGE
+        state.userList[0].offset++;
+        // Set read status to state it received (sent success = read, received = haven't read)
+        state.userList[0].read = action.payload.type === 'sent';
       } else {
-        alert('Can\'t find the user list while on received');
+        console.log('Adding data for', receiver);
+        state.userList.unshift({
+          ...defaultChatInfo,
+          name: receiver,
+          type: action.payload.message.type,
+          actionTime: new Date(Date.now() - 7 * 3600 * 1000),
+        });
       }
     },
     setReadStatus: (state, action: PayloadAction<{ name: string, seenStatus: boolean }>) => {

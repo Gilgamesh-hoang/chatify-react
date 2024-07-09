@@ -5,7 +5,7 @@ import toast from 'react-hot-toast';
 import axios from 'axios';
 import { IoClose } from 'react-icons/io5';
 import { LuUserPlus2 } from 'react-icons/lu';
-import { useSelector } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import { socketSelector, userSelector } from '~/redux/selector';
 import * as yup from 'yup';
 import { useFormik } from 'formik';
@@ -14,18 +14,23 @@ import { UserSideBar } from './SearchUser';
 import clsx from 'clsx';
 import { useNavigate } from 'react-router';
 import languageUtil from '~/utils/languageUtil';
+import { AppDispatch } from '~/redux/store';
+import { setUpdateNewMessage } from '~/redux/chatDataSlice';
+
 const addUserSchema = yup.object({
   name: yup.string().required('Name is required'),
   msg: yup.string().required('Message is required'),
 });
-const AddUser = ({ onClose }: { onClose: () => void }) => {
+const AddUser = ({ username, onClose }: { username?: string, onClose: () => void }) => {
   const [loading, setLoading] = useState(false);
   const [name, setName] = useState('');
+  const [greeting, setGreeting] = useState('');
   const navigate = useNavigate();
+  const dispatch = useDispatch<AppDispatch>();
   const user = useSelector(userSelector);
   const socket = useSelector(socketSelector);
   const initialValues = {
-    name: '',
+    name: username ? username : '',
     msg: `Xin chào, mình là ${user.username}. Rất vui được làm quen với bạn. Hãy phản hồi mình nhé!`,
   };
   const formik = useFormik({
@@ -38,6 +43,7 @@ const AddUser = ({ onClose }: { onClose: () => void }) => {
   const handleSendMsgToUser = (values: { name: string; msg: string }) => {
     if (!loading) {
       setName(values.name);
+      setGreeting(values.msg);
       setLoading(true);
       const sendMsgToUserParams = {
         action: 'onchat',
@@ -70,14 +76,20 @@ const AddUser = ({ onClose }: { onClose: () => void }) => {
     if (response.event === 'GET_USER_LIST') {
       if (response.status === 'success') {
         let userList: UserSideBar[] = response.data;
-        userList = userList.filter((user) =>
-          user.name.toLowerCase().includes(name.toLowerCase())
-        );
+        userList = userList.filter((user) => user.name.toLowerCase().match(name.toLowerCase()));
         console.log(userList);
         if (userList.length > 0) {
-          message.success(
-            'Send greeting to ' + userList[0].name + ' sucessfully'
-          );
+          message.success('Send greeting to ' + userList[0].name + ' sucessfully');
+          dispatch(setUpdateNewMessage({
+            type: 'sent',
+            message: {
+              name: user.username,
+              to: name,
+              type: 0,
+              createAt: new Date(Date.now() - 7 * 3600 * 1000),
+              mes: greeting,
+            },
+          }));
           setTimeout(() => {
             onClose();
             navigate('/0/' + userList[0].name);
@@ -91,6 +103,7 @@ const AddUser = ({ onClose }: { onClose: () => void }) => {
       setLoading(false);
     }
   };
+
   useEffect(() => {
     socket.addEventListener('message', handleCheckFriend);
     return () => {
@@ -134,7 +147,7 @@ const AddUser = ({ onClose }: { onClose: () => void }) => {
             type="submit"
             className={clsx(
               'outline-none border-none bg-[#00ACB4] rounded  text-white px-5 py-3 font-bold ms-auto ',
-              loading && 'opacity-70 cursor-default'
+              loading && 'opacity-70 cursor-default',
             )}
           >
             {loading && <Loading />}

@@ -54,22 +54,26 @@ const SideBarItem: React.FC<SideBarProp> = (props) => {
       // Bypass update if messages exists (making sure sidebaritem only get message once)
       if (chatInfo && chatInfo.messages && chatInfo.messages.length > 0) return;
       if (data.event === 'GET_ROOM_CHAT_MES') {
-        dispatch(setMessageListToChat({ name: props.name, currentUsername: user.username, messages: data.data.chatData }));
         // Room event can be filtered through room name
         if (props.type === 1 && data.data.name === props.name) {
+          dispatch(setMessageListToChat({ name: props.name, currentUsername: user.username, messages: data.data.chatData }));
           const roomUserList: string[] = [];
           data.data.userList.forEach((user: { name: string; }) => roomUserList.push(user.name));
           dispatch(updateChatDataRooms({ name: props.name, roomData: { ...data.data, userList: roomUserList } }));
         }
       }
       else {
+        const filteredSelfMessages = data.data.filter((message: LastMessage) => message.name === props.name && message.to === props.name)
+
         // Since individual messages can't do the same, it must be filtered
-        const filteredMessages = data.data.filter((message: LastMessage) => message.name === props.name || message.to === props.name);
+        const filteredMessages = data.data.filter((message: LastMessage) =>
+          (message.name === props.name && message.to !== props.name) || (message.name !== props.name && message.to === props.name));
         // Check if there are any messages.
-        if (filteredMessages.length > 0) {
+        if (user.username === props.name)
+          dispatch(setMessageListToChat({ name: props.name, currentUsername: user.username, messages: filteredSelfMessages }));
+        else if (filteredMessages.length > 0) {
           dispatch(setMessageListToChat({ name: props.name, currentUsername: user.username, messages: filteredMessages }));
         }
-
       }
     } else if (data.status === 'error') {
       toast.error('Error when get message', { duration: 2000 });
@@ -99,9 +103,9 @@ const SideBarItem: React.FC<SideBarProp> = (props) => {
   }, [socket, props]);
 
 
-  const getTime = (message: LastMessage): string => {
+  const getTime = (timestamp: Date): string => {
     const currentDate = new Date();
-    const deltaTime = currentDate.getTime() - 7 * 3600 * 1000 - message.createAt.getTime();
+    const deltaTime = currentDate.getTime() - 7 * 3600 * 1000 - timestamp.getTime();
     const year = (365.25 * 24 * 3600 * 1000), week = (7 * 24 * 3600 * 1000), day = 24 * 3600 * 1000, hour = 3600 * 1000,
       minute = 60 * 1000;
     // if delta is big for year, divide delta by year. Else go for week, day, hour and minute
@@ -115,20 +119,19 @@ const SideBarItem: React.FC<SideBarProp> = (props) => {
 
   useEffect(() => {
     if (timeRef.current)
-      timeRef.current.innerHTML = chatInfo && chatInfo.messages && chatInfo.messages.length > 0 ? getTime(chatInfo.messages[0]) : '';
+      timeRef.current.innerHTML = chatInfo && chatInfo.messages && chatInfo.messages.length > 0 ? getTime(chatInfo.messages[0].createAt) : '';
     const interval = setInterval(() => {
       if (timeRef.current)
-        timeRef.current.innerHTML = chatInfo && chatInfo.messages && chatInfo.messages.length > 0 ? getTime(chatInfo.messages[0]) : '';
+        timeRef.current.innerHTML = chatInfo && chatInfo.messages && chatInfo.messages.length > 0 ? getTime(chatInfo.messages[0].createAt) : getTime(new Date(props.actionTime.getTime() - 7 * 3600 * 1000));
     }, 1000);
     return () => {
       clearInterval(interval);
     };
-  }, [socket, chatInfo?.messages]);
+  }, [chatInfo?.messages]);
 
   useEffect(() => {
-    if (name && name === props.name) {
+    if (name && name === props.name)
       handleSeen();
-    }
   }, [name]);
 
   const handleSeen = () => {
@@ -145,7 +148,7 @@ const SideBarItem: React.FC<SideBarProp> = (props) => {
     const isVideo = cloudinaryURL?.isVideo;
     const sender =
       lastMessage.name === user.username ? 'You: ' : lastMessage.type === 1 ? `${lastMessage.name}: ` : '';
-    const message = isURL ? isImage ? 'Send image ' : isVideo ? 'Send video ' : mes : languageUtil.base64ToUtf8(mes);
+    const message = isURL ? isImage ? 'Send image ' : isVideo ? 'Send video ' : mes : mes;
 
     return (
       <p className={clsx('overflow-hidden text-ellipsis whitespace-nowrap', { 'font-bold': !chatInfo?.read })}>
@@ -179,7 +182,7 @@ const SideBarItem: React.FC<SideBarProp> = (props) => {
               { 'font-bold': !chatInfo?.read },
             )}
           >
-            {props.name}
+            {props.name}{props.name === user.username && ' (you)'}
           </h3>
 
           <div className="text-slate-500 text-xs items-center gap-1">
