@@ -104,17 +104,14 @@ const chatDataSlice = createSlice({
       }
     },
     // set messages to the list (only get call on startup)
-    setMessageListToChat: (state, action: PayloadAction<{
-      name: string,
-      currentUsername: string,
-      messages: Message[]
-    }>) => {
+    setMessageListToChat: (state, action: PayloadAction<{ name: string, currentUsername: string, messages: Message[]  }>) => {
       // first, find the user with the name
       const index = state.userList.findIndex((user) => user.name === action.payload.name);
       // if founded
       if (index >= 0) {
         // convert all message date to REAL DATE
         action.payload.messages.forEach((message) => message.createAt = new Date(message.createAt));
+        state.userList[index].page = 1;
         state.userList[index].messages = action.payload.messages;
         state.userList[index].moreMessage = action.payload.messages.length >= 50;
         state.userList[index].offset = 0;
@@ -139,6 +136,8 @@ const chatDataSlice = createSlice({
       const index = state.userList.findIndex((user) => user.name === action.payload.name);
       // if founded
       if (index >= 0) {
+        console.log(action.payload)
+
         // convert all message date to REAL DATE
         action.payload.messages.forEach((message) => message.createAt = new Date(message.createAt));
         // remove offset amount of message from sending and receiving message.

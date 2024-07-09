@@ -428,7 +428,8 @@ const MessagePage = () => {
               chatInfo && chatInfo.messages && chatInfo.messages.length > 0 &&
               chatInfo.messages.map((msg: Message, index: number) => {
                   const isSelected = searchState && searchResult[searchCursor] === index;
-                  return (<div ref={isSelected ? searchFocus : undefined}>
+                  return (
+                    <div ref={isSelected ? searchFocus : undefined}>
                     <MessageItem key={index}
                                  msg={msg}
                                  username={user.username}
