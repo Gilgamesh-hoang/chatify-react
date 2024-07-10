@@ -53,17 +53,22 @@ const Sidebar = () => {
           data.event === 'GET_USER_LIST' &&
           data.status === 'success'
         ) {
-          if (chatData.userList.length > 0) return;
+          // if (chatData.userList.length > 0) return;
 
           const conversationUserData: UserInfo[] = [];
+          const tempArray: UserInfo[] = [];
+
           data.data.forEach((conv: any) => {
-            // if (conv.name !== userName)
-            conversationUserData.push({
+            tempArray.push({
               name: conv.name,
               type: conv.type === 1 ? 1 : 0,
               actionTime: new Date(conv.actionTime),
             });
           });
+          tempArray.sort(
+            (a, b) => b.actionTime!.getTime() - a.actionTime!.getTime()
+          );
+          tempArray.forEach((item) => conversationUserData.push(item));
           console.log('conversationUserData', conversationUserData);
           dispatch(setChatDataUsers(conversationUserData));
         }

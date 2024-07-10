@@ -3,14 +3,20 @@ import { useFormik } from 'formik';
 import React, { useEffect, useState } from 'react';
 import * as yup from 'yup';
 import Loading from './Loading';
-import { CiCirclePlus } from 'react-icons/ci';
-import { useSelector } from 'react-redux';
-import { chatDataSelector, socketSelector } from '~/redux/selector';
+import { useDispatch, useSelector } from 'react-redux';
+import {
+  chatDataSelector,
+  socketSelector,
+  userSelector,
+} from '~/redux/selector';
 import { UserSideBar } from './SearchUser';
 import UserSearchCard from './UserSearchCard';
 import { SocketEvent } from '~/model/SocketEvent';
 import { message } from 'antd';
 import { useNavigate } from 'react-router';
+import { AppDispatch } from '~/redux/store';
+import constant from '~/utils/constant';
+import languageUtil from '~/utils/languageUtil';
 const groupSchema = yup.object({
   name: yup.string().required('Please enter group name'),
 });
@@ -26,6 +32,7 @@ const GroupForm = ({
   const socket = useSelector(socketSelector);
   const chatData = useSelector(chatDataSelector);
   const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
+  const currentUser = useSelector(userSelector);
   const initialValues = {
     name: '',
   };
@@ -61,6 +68,28 @@ const GroupForm = ({
         if (response.status === 'success') {
           message.success('Created group');
           message.info('Sending invite message to group for user');
+          const groupName = response.data.name;
+          for (const username of selectedUsers) {
+            const sendMsgParams: SocketEvent = {
+              action: 'onchat',
+              data: {
+                event: 'SEND_CHAT',
+                data: {
+                  type: 'people',
+                  to: username,
+                  mes: languageUtil.utf8ToBase64(
+                    constant.msgInviteGroup(groupName)
+                  ),
+                },
+              },
+            };
+            socket.send(JSON.stringify(sendMsgParams));
+          }
+          message.info('Send message successfully');
+          setTimeout(() => {
+            onClose();
+            navigate('/1/' + groupName);
+          }, 200);
         } else {
           message.error(response.mes);
         }
@@ -92,7 +121,9 @@ const GroupForm = ({
   });
   useEffect(() => {
     const originalChat = chatData.userList;
-    const userChat = originalChat.filter((user) => user.type == 0);
+    const userChat = originalChat.filter(
+      (user) => user.type == 0 && user.name != currentUser.username
+    );
     setListUser(userChat);
   }, [chatData]);
   useEffect(() => {
@@ -139,7 +170,9 @@ const GroupForm = ({
                         <UserSearchCard
                           key={index}
                           user={user}
-                          onClose={() => {}}
+                          onClose={() => {
+                            handleCheckboxChange(user.name);
+                          }}
                         />
                       </div>
                     );
@@ -154,8 +187,7 @@ const GroupForm = ({
               loading && 'opacity-70 cursor-default'
             )}
           >
-            {loading && <Loading />}
-            {!loading && tab == 'create' ? 'Create' : 'Join'}
+            {loading ? <Loading /> : tab === 'create' ? 'Create' : 'Join'}
           </button>
         </div>
       </form>

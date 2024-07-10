@@ -20,7 +20,6 @@ const GroupModal = ({ onClose }: { onClose: () => void }) => {
   const [tab, setTab] = useState<'create' | 'join'>('create');
   const [search, setSearch] = useState('');
   const chatData = useSelector(chatDataSelector);
-
   const [debouncedSearch] = useDebounce(search, 400);
   const dispatch = useDispatch<AppDispatch>();
   const socket = useSelector(socketSelector);
