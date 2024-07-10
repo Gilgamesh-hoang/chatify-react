@@ -164,7 +164,7 @@ const SideBarItem: React.FC<SideBarProp> = (props) => {
     <>
       <Toaster position={'top-center'} />
       <NavLink
-        to={`/${props.type}/${props.name}`}
+        to={`/${props.type}/${encodeURIComponent(props.name)}`}
         key={props.name}
         onClick={handleSeen}
         className={clsx(

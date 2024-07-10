@@ -36,7 +36,7 @@ const ChatInfoPopup: React.FC<InfoProps> = (props) => {
   const handleClick = () => {
     if (chatUserExist) {
       props.onClose()
-      navigate(`/${props.type}/${props.name}`);
+      navigate(`/${props.type}/${encodeURIComponent(props.name)}`);
     }
     else  {
       showAddUser();

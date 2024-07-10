@@ -24,7 +24,7 @@ const ChatUserCard: React.FC<ChatUserCardData> = ({ name, type, memberSize, isEx
   const handleClick = () => {
     if (isExist) {
       hideFunc();
-      navigate(`/${type}/${name}`);
+      navigate(`/${type}/${encodeURIComponent(name)}`);
     }
     else
       setAddUser(true)

@@ -29,7 +29,7 @@ const ChatUserMenu: React.FC<{
   const handleSendClick = () => {
     onClose();
     if (chatUserExist)
-      navigate(`/0/${userName}`);
+      navigate(`/0/${encodeURIComponent(userName)}`);
     else
       onAddUser();
   };
