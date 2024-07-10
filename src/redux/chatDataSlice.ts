@@ -77,6 +77,21 @@ const chatDataSlice = createSlice({
         actionTime: user.actionTime,
       }));
     },
+    // add chat data user
+    addChatDataUser: (state, action: PayloadAction<{ name: string, type: 0 | 1, }>) => {
+      // first, find the user with the name
+      const index = state.userList.findIndex((user) => user.name === action.payload.name && user.type === action.payload.type);
+      // if not founded
+      if (index < 0) {
+        console.log('Adding data for', action.payload.name, action.payload.type);
+        state.userList.unshift({
+          ...defaultChatInfo,
+          name: action.payload.name,
+          type: action.payload.type,
+          actionTime: new Date(Date.now() - 7 * 3600 * 1000),
+        });
+      }
+    },
     // update a chat data room
     updateChatDataRooms: (state, action: PayloadAction<{ name: string, type: 0|1, roomData: RoomChat }>) => {// first, find the user with the name
       const index = state.userList.findIndex((user) => user.name === action.payload.name && user.type === action.payload.type);
@@ -208,6 +223,7 @@ const chatDataSlice = createSlice({
 // Action creators are generated for each case reducer function
 export const {
   setChatDataUsers,
+  addChatDataUser,
   setChatDataUserOnline,
   setMessageListToChat,
   setUpdateNewMessage,
