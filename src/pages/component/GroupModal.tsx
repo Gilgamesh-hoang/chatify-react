@@ -70,7 +70,7 @@ const GroupModal = ({ onClose }: { onClose: () => void }) => {
         </div>
 
         <div className="w-full p-4 rounded">
-          <GroupForm tab={tab} />
+          <GroupForm tab={tab} onClose={onClose} />
         </div>
       </div>
 
