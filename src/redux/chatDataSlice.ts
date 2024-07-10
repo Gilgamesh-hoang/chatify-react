@@ -100,21 +100,18 @@ const chatDataSlice = createSlice({
         if (state.userList[index].online !== action.payload.online)
           state.userList[index].online = action.payload.online;
       } else {
-        alert('Can\'t find the user while set status');
+        console.log('Can\'t find the user while set status');
       }
     },
     // set messages to the list (only get call on startup)
-    setMessageListToChat: (state, action: PayloadAction<{
-      name: string,
-      currentUsername: string,
-      messages: Message[]
-    }>) => {
+    setMessageListToChat: (state, action: PayloadAction<{ name: string, currentUsername: string, messages: Message[]  }>) => {
       // first, find the user with the name
       const index = state.userList.findIndex((user) => user.name === action.payload.name);
       // if founded
       if (index >= 0) {
         // convert all message date to REAL DATE
         action.payload.messages.forEach((message) => message.createAt = new Date(message.createAt));
+        state.userList[index].page = 1;
         state.userList[index].messages = action.payload.messages;
         state.userList[index].moreMessage = action.payload.messages.length >= 50;
         state.userList[index].offset = 0;
@@ -139,6 +136,8 @@ const chatDataSlice = createSlice({
       const index = state.userList.findIndex((user) => user.name === action.payload.name);
       // if founded
       if (index >= 0) {
+        console.log(action.payload)
+
         // convert all message date to REAL DATE
         action.payload.messages.forEach((message) => message.createAt = new Date(message.createAt));
         // remove offset amount of message from sending and receiving message.
@@ -155,7 +154,7 @@ const chatDataSlice = createSlice({
         state.userList[index].page = action.payload.page;
         state.userList[index].offset = 0;
       } else {
-        alert('Can\'t find the user list while add messages to list');
+        console.log('Can\'t find the user list while add messages to list');
       }
     },
     // on received or sent message, do the classic
@@ -198,7 +197,7 @@ const chatDataSlice = createSlice({
         // put new message in here
         state.userList[index].read = action.payload.seenStatus;
       } else {
-        alert('Can\'t find the user list while on received');
+        console.log('Can\'t find the user list while on received');
       }
     },
   },
