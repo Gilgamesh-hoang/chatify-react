@@ -18,14 +18,14 @@ interface InfoProps {
 }
 
 const ChatInfoPopup: React.FC<InfoProps> = (props) => {
-  const { type, name } = useParams()
+  const { name } = useParams()
 
   const user = useSelector(userSelector);
   const chatData = useSelector(chatDataSelector);
   const navigate = useNavigate();
+
   const chatUserList = chatData.userList.filter((chatInfo) => chatInfo.type === 0 && chatInfo.name !== user.username);
   const chatUsernameList = chatUserList.map((chatInfo) => chatInfo.name);
-
   const relatedRoomChat = chatData.userList.filter((chatInfo) => chatInfo.type === 1 && (chatInfo.room_member?.indexOf(props.name)! >= 0 || chatInfo.room_owner === props.name));
 
   const chatUserExist = chatUsernameList.indexOf(props.name) >= 0

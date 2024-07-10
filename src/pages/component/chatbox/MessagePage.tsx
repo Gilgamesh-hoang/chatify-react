@@ -57,7 +57,7 @@ const MessagePage = () => {
   // get chat data info
   const dispatch = useDispatch<AppDispatch>();
   const chatData = useSelector(chatDataSelector);
-  const chatInfo = chatData.userList.find((userInfo) => userInfo.name === name);
+  const chatInfo = chatData.userList.find((userInfo) => userInfo.name === name && userInfo.type === currentChat.type);
   const chatLatestMessage = chatInfo && chatInfo.messages && chatInfo.messages.length > 0 ? chatInfo.messages[0] : null;
   // for searching purposes only
   const [searchState, setSearchState] = useState(false);
@@ -192,6 +192,7 @@ const MessagePage = () => {
         //and set the preferred chat to the screen
         dispatch(appendMessageListToChat({
           name: currentChat.name,
+          type: currentChat.type === 0 ? 0 : 1,
           page: (chatInfo.page + 1 + chatInfo.offset / 50),
           messages: filteredMessages,
         }));
@@ -244,7 +245,7 @@ const MessagePage = () => {
       const response = JSON.parse(evt.data);
       if (!(response.event === 'CHECK_USER')) return;
       if (response.status === 'success') {
-        dispatch(setChatDataUserOnline({ name: currentChat.name, online: response.data.status }));
+        dispatch(setChatDataUserOnline({ name: currentChat.name, type: currentChat.type === 0 ? 0 : 1, online: response.data.status }));
       } else if (response.status === 'error') {
         toast.error('Error when get status of '.concat(name || 'unknown'), { duration: 2000 });
       }

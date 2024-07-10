@@ -78,8 +78,8 @@ const chatDataSlice = createSlice({
       }));
     },
     // update a chat data room
-    updateChatDataRooms: (state, action: PayloadAction<{ name: string, roomData: RoomChat }>) => {// first, find the user with the name
-      const index = state.userList.findIndex((user) => user.name === action.payload.name);
+    updateChatDataRooms: (state, action: PayloadAction<{ name: string, type: 0|1, roomData: RoomChat }>) => {// first, find the user with the name
+      const index = state.userList.findIndex((user) => user.name === action.payload.name && user.type === action.payload.type);
       // if founded
       if (index >= 0) {
         state.userList[index] = {
@@ -92,9 +92,9 @@ const chatDataSlice = createSlice({
       }
     },
     // set online user
-    setChatDataUserOnline: (state, action: PayloadAction<{ name: string, online: boolean }>) => {
+    setChatDataUserOnline: (state, action: PayloadAction<{ name: string, type: 0|1, online: boolean }>) => {
       // first, find the user with the name
-      const index = state.userList.findIndex((user) => user.name === action.payload.name);
+      const index = state.userList.findIndex((user) => user.name === action.payload.name && user.type === action.payload.type);
       // if founded
       if (index >= 0) {
         if (state.userList[index].online !== action.payload.online)
@@ -104,9 +104,9 @@ const chatDataSlice = createSlice({
       }
     },
     // set messages to the list (only get call on startup)
-    setMessageListToChat: (state, action: PayloadAction<{ name: string, currentUsername: string, messages: Message[]  }>) => {
+    setMessageListToChat: (state, action: PayloadAction<{ name: string, type: 0|1, currentUsername: string, messages: Message[]  }>) => {
       // first, find the user with the name
-      const index = state.userList.findIndex((user) => user.name === action.payload.name);
+      const index = state.userList.findIndex((user) => user.name === action.payload.name && user.type === action.payload.type);
       // if founded
       if (index >= 0) {
         // convert all message date to REAL DATE
@@ -131,9 +131,9 @@ const chatDataSlice = createSlice({
       }
     },
     // append messages to the list
-    appendMessageListToChat: (state, action: PayloadAction<{ name: string, page: number, messages: Message[] }>) => {
+    appendMessageListToChat: (state, action: PayloadAction<{ name: string, type: 0|1, page: number, messages: Message[] }>) => {
       // first, find the user with the name
-      const index = state.userList.findIndex((user) => user.name === action.payload.name);
+      const index = state.userList.findIndex((user) => user.name === action.payload.name && user.type === action.payload.type);
       // if founded
       if (index >= 0) {
         console.log(action.payload)
@@ -161,7 +161,7 @@ const chatDataSlice = createSlice({
     setUpdateNewMessage: (state, action: PayloadAction<{ type: 'sent' | 'received', message: Message }>) => {
       const receiver = action.payload.type === 'received' ? (action.payload.message.type === 1 ? action.payload.message.to : action.payload.message.name) : action.payload.message.to;
       // first, find the user with the name
-      const index = state.userList.findIndex((user) => user.name === receiver);
+      const index = state.userList.findIndex((user) => user.name === receiver && user.type === action.payload.message.type);
       // if founded
       if (index >= 0) {
         // put the chat data at the top of the list
@@ -189,9 +189,10 @@ const chatDataSlice = createSlice({
         });
       }
     },
-    setReadStatus: (state, action: PayloadAction<{ name: string, seenStatus: boolean }>) => {
+    // on check status
+    setReadStatus: (state, action: PayloadAction<{ name: string, type: 0|1, seenStatus: boolean }>) => {
       // first, find the user with the name
-      const index = state.userList.findIndex((user) => user.name === action.payload.name);
+      const index = state.userList.findIndex((user) => user.name === action.payload.name && user.type === action.payload.type);
       // if founded
       if (index >= 0) {
         // put new message in here
