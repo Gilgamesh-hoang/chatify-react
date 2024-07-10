@@ -46,12 +46,15 @@ const ChatUserCard: React.FC<ChatUserCardData> = ({ name, type, memberSize, isEx
         </p>
       </div>
       <div className="ml-auto">
-        <button className="border shadow rounded p-2" onClick={handleClick}>
-          {isExist ? <IoChatbubbleEllipses /> : type === 0 && <FaUserPlus />}
-        </button>
+        {
+          name !== user.username &&
+          <button className="border shadow rounded p-2" onClick={handleClick}>
+            {isExist ? <IoChatbubbleEllipses /> : type === 0 && <FaUserPlus />}
+          </button>
+        }
       </div>
 
-      {addUser && <AddUser onClose={()=>setAddUser(false)} username={name} /> }
+      {addUser && <AddUser onClose={() => setAddUser(false)} username={name} />}
     </div>
   );
 };
