@@ -17,7 +17,7 @@ const MessageEmbedItem = (
   return (
     <>
       {isFacebook && <FacebookEmbed url={url} width={width} height={height} /> }
-      {isInstagram && <InstagramEmbed url={url} width={width} height={height} /> }
+      {isInstagram && <InstagramEmbed url={url} width={width}  /> }
       {isLinkedIn && <LinkedInEmbed url={url} width={width} height={height} /> }
       {isTwitter && <XEmbed url={url} width={width} height={height} /> }
       {isYouTube && <YouTubeEmbed url={url} width={width} height={height} /> }

@@ -226,6 +226,7 @@ const MessagePage = () => {
         dispatch(
           appendMessageListToChat({
             name: currentChat.name,
+            type: currentChat.type === 0 ? 0 : 1,
             page: chatInfo.page + 1 + chatInfo.offset / 50,
             messages: filteredMessages,
           })
@@ -284,6 +285,7 @@ const MessagePage = () => {
         dispatch(
           setChatDataUserOnline({
             name: currentChat.name,
+            type: currentChat.type === 0 ? 0 : 1,
             online: response.data.status,
           })
         );
