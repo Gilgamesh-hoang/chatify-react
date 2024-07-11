@@ -77,6 +77,7 @@ const MessagePage = () => {
     chatInfo && chatInfo.messages && chatInfo.messages.length > 0
       ? chatInfo.messages[0]
       : null;
+
   // for searching purposes only
   const [searchState, setSearchState] = useState(false);
   const [searchResult, setSearchResult] = useState<number[]>([]);
