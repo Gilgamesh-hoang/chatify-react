@@ -77,6 +77,7 @@ const MessagePage = () => {
     chatInfo && chatInfo.messages && chatInfo.messages.length > 0
       ? chatInfo.messages[0]
       : null;
+
   // for searching purposes only
   const [searchState, setSearchState] = useState(false);
   const [searchResult, setSearchResult] = useState<number[]>([]);
@@ -230,6 +231,7 @@ const MessagePage = () => {
             messages: filteredMessages,
           })
         );
+
       } else if (response.status === 'error') {
         toast.error(
           'Error when get chat message of '.concat(name || 'unknown'),
@@ -287,6 +289,7 @@ const MessagePage = () => {
             online: response.data.status,
           })
         );
+
       } else if (response.status === 'error') {
         toast.error('Error when get status of '.concat(name || 'unknown'), {
           duration: 2000,

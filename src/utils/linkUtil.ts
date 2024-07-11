@@ -1,9 +1,16 @@
 import { FileType } from '~/model/FileType';
 
+//try separating string from URL
+//ignoring localhost and IP address atm
 const splitWithURLs = (str: string) => {
-  const regex = new RegExp(
-    /((?:https:\/\/www\.|http:\/\/www\.|https:\/\/|http:\/\/)?\w{2,}(?:\.\w{2,})(?:\.\w{2,})?(?:\/\S+)?)/gm
-  );
+  const regex = new RegExp("(" +
+    "(?:https://www\\.|http://www\\.|https://|http://)?" + //protocol being http or https, with or without www
+    "[A-Za-z0-9-]{2,}" + //domain name (or subdomain if the below one catches)
+    "(?:\\.[A-Za-z0-9-]{2,})?" + //true domain name after subdomain
+    "(?:\\.[A-Za-z0-9]{2,})" + //top level domain (second level if the below catches)
+    "(?:\\.[A-Za-z0-9]{2,})?" + //true top level domain
+    "(?:/\\S+)?" + //path and stuff
+    ")", "gm")
   return str.split(regex);
 };
 
