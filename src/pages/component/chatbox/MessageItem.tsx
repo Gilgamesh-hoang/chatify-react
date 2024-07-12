@@ -91,7 +91,7 @@ const MessageItem: React.FC<MessageItemProps> = ({
               href={utf8msg}
               target="_blank"
               rel="noreferrer"
-              className={'px-2 break-words text-blue-500 underline'}
+              className={'px-2 break-words text-blue-500 underline block'}
             >
               {
                 // if there is query search, try to highlight the keywords. else render normal message

@@ -18,7 +18,7 @@ const splitWithURLs = (str: string) => {
 };
 
 const isValidURL = (str: string): boolean => {
-  //If there's space (not the %20) in the string, it's not an url
+  //If there's space (not the %20) or next line in the string, it's not an url
   if (
     str.trim().includes(' ') ||
     str.trim().includes('\n') ||
@@ -26,8 +26,8 @@ const isValidURL = (str: string): boolean => {
   )
     return false;
   try {
-    new URL(str);
-    return true;
+    // If a url doesn't exists, origin === 'null'
+    return new URL(str).origin !== 'null';
   } catch (err) {
     return false;
   }
