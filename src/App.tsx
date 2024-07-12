@@ -71,7 +71,7 @@ function App() {
             privateRoutes.map((routeObject, index: number) =>
               RouteRender(routeObject, index)
             )}
-          {/*<Route path="*" element={userName ? <Navigate to={'/'}/> : <Navigate to={'/login'} />} />*/}
+          <Route path="*" element={userName ? <Navigate to={'/'}/> : <Navigate to={'/login'} />} />
         </Routes>
       </Router>
     </div>

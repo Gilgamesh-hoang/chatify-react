@@ -1,10 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { IoSearchOutline } from 'react-icons/io5';
-import Loading from './Loading';
-import toast from 'react-hot-toast';
-import axios from 'axios';
 import { IoClose } from 'react-icons/io5';
-import { LuUserPlus2 } from 'react-icons/lu';
+import Loading from './Loading';
 import { useDispatch, useSelector } from 'react-redux';
 import { socketSelector, userSelector } from '~/redux/selector';
 import * as yup from 'yup';

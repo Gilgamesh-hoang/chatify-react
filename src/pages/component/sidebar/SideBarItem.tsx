@@ -2,7 +2,7 @@ import Avatar from '~/component/Avatar';
 import clsx from 'clsx';
 
 import { NavLink, useParams } from 'react-router-dom';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { SideBarProp } from '~/model/SideBarProp';
 import { useDispatch, useSelector } from 'react-redux';
 import { chatDataSelector, socketSelector, userSelector } from '~/redux/selector';
@@ -56,23 +56,34 @@ const SideBarItem: React.FC<SideBarProp> = (props) => {
       if (data.event === 'GET_ROOM_CHAT_MES') {
         // Room event can be filtered through room name
         if (props.type === 1 && data.data.name === props.name) {
-          dispatch(setMessageListToChat({ name: props.name, currentUsername: user.username, messages: data.data.chatData }));
+          dispatch(setMessageListToChat({
+            name: props.name,
+            currentUsername: user.username,
+            messages: data.data.chatData,
+          }));
           const roomUserList: string[] = [];
           data.data.userList.forEach((user: { name: string; }) => roomUserList.push(user.name));
           dispatch(updateChatDataRooms({ name: props.name, roomData: { ...data.data, userList: roomUserList } }));
         }
-      }
-      else {
-        const filteredSelfMessages = data.data.filter((message: LastMessage) => message.name === props.name && message.to === props.name)
+      } else {
+        const filteredSelfMessages = data.data.filter((message: LastMessage) => message.name === props.name && message.to === props.name);
 
         // Since individual messages can't do the same, it must be filtered
         const filteredMessages = data.data.filter((message: LastMessage) =>
           (message.name === props.name && message.to !== props.name) || (message.name !== props.name && message.to === props.name));
         // Check if there are any messages.
         if (user.username === props.name)
-          dispatch(setMessageListToChat({ name: props.name, currentUsername: user.username, messages: filteredSelfMessages }));
+          dispatch(setMessageListToChat({
+            name: props.name,
+            currentUsername: user.username,
+            messages: filteredSelfMessages,
+          }));
         else if (filteredMessages.length > 0) {
-          dispatch(setMessageListToChat({ name: props.name, currentUsername: user.username, messages: filteredMessages }));
+          dispatch(setMessageListToChat({
+            name: props.name,
+            currentUsername: user.username,
+            messages: filteredMessages,
+          }));
         }
       }
     } else if (data.status === 'error') {
@@ -92,7 +103,7 @@ const SideBarItem: React.FC<SideBarProp> = (props) => {
           if (socket.readyState === WebSocket.OPEN) {
             socket.send(JSON.stringify(getMessParams));
           }
-        }, 50);
+        }, 1000);
       }
     }
     // Remove the 'message' event listener when the component unmounts.
@@ -103,18 +114,40 @@ const SideBarItem: React.FC<SideBarProp> = (props) => {
   }, [socket, props]);
 
 
+  // const getTime = (timestamp: Date): string => {
+  //   const currentDate = new Date();
+  //   const deltaTime = currentDate.getTime() - 7 * 3600 * 1000 - timestamp.getTime();
+  //   const year = (365.25 * 24 * 3600 * 1000), week = (7 * 24 * 3600 * 1000), day = 24 * 3600 * 1000, hour = 3600 * 1000,
+  //     minute = 60 * 1000;
+  //   // if delta is big for year, divide delta by year. Else go for week, day, hour and minute
+  //   return deltaTime > year ? Math.floor(deltaTime / year) + ' year' + (Math.floor(deltaTime / year) > 1 ? 's' : '') :
+  //     deltaTime > week ? Math.floor(deltaTime / week) + ' week' + (Math.floor(deltaTime / week) > 1 ? 's' : '') :
+  //       deltaTime > day ? Math.floor(deltaTime / day) + ' day' + (Math.floor(deltaTime / day) > 1 ? 's' : '') :
+  //         deltaTime > hour ? Math.floor(deltaTime / hour) + ' hour' + (Math.floor(deltaTime / hour) > 1 ? 's' : '') :
+  //           Math.floor(deltaTime / minute) + ' minute' + (Math.floor(deltaTime / minute) > 1 ? 's' : '');
+  //
+  // };
+
+
   const getTime = (timestamp: Date): string => {
     const currentDate = new Date();
-    const deltaTime = currentDate.getTime() - 7 * 3600 * 1000 - timestamp.getTime();
-    const year = (365.25 * 24 * 3600 * 1000), week = (7 * 24 * 3600 * 1000), day = 24 * 3600 * 1000, hour = 3600 * 1000,
-      minute = 60 * 1000;
-    // if delta is big for year, divide delta by year. Else go for week, day, hour and minute
-    return deltaTime > year ? Math.floor(deltaTime / year) + ' year' + (Math.floor(deltaTime / year) > 1 ? 's' : '') :
-      deltaTime > week ? Math.floor(deltaTime / week) + ' week' + (Math.floor(deltaTime / week) > 1 ? 's' : '') :
-        deltaTime > day ? Math.floor(deltaTime / day) + ' day' + (Math.floor(deltaTime / day) > 1 ? 's' : '') :
-          deltaTime > hour ? Math.floor(deltaTime / hour) + ' hour' + (Math.floor(deltaTime / hour) > 1 ? 's' : '') :
-            Math.floor(deltaTime / minute) + ' minute' + (Math.floor(deltaTime / minute) > 1 ? 's' : '');
+    const timeDifference = currentDate.getTime() - 7 * 3600 * 1000 - timestamp.getTime();
+    const TIME_UNITS = [
+      { name: 'year', value: 365.25 * 24 * 3600 * 1000 },
+      { name: 'week', value: 7 * 24 * 3600 * 1000 },
+      { name: 'day', value: 24 * 3600 * 1000 },
+      { name: 'hour', value: 3600 * 1000 },
+      { name: 'minute', value: 60 * 1000 },
+    ];
 
+    for (const unit of TIME_UNITS) {
+      if (timeDifference > unit.value) {
+        const time = Math.floor(timeDifference / unit.value);
+        return `${time} ${unit.name}${time > 1 ? 's' : ''}`;
+      }
+    }
+
+    return '';
   };
 
   useEffect(() => {
@@ -135,7 +168,7 @@ const SideBarItem: React.FC<SideBarProp> = (props) => {
   }, [name]);
 
   const handleSeen = () => {
-    dispatch(setReadStatus({name: props.name, seenStatus: true}))
+    dispatch(setReadStatus({ name: props.name, seenStatus: true }));
     localStorage.setItem(`unseen_${props.name}`, String(new Date().getTime()));
     // setUnseen(false);
   };

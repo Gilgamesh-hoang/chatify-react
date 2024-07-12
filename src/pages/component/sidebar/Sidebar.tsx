@@ -13,7 +13,6 @@ const Sidebar = () => {
   const user: UserState = useSelector(userSelector);
   const chatData = useSelector(chatDataSelector);
   const userName = user.username;
-  // const socket = useSelector(socketSelector);
   const socket = useSelector(socketSelector);
   const statusSocket = useSelector(socketStatusSelector);
   const dispatch = useDispatch<AppDispatch>();
@@ -35,14 +34,17 @@ const Sidebar = () => {
               type: 'received',
               message: { ...data.data, createAt: new Date(Date.now() - 7 * 3600 * 1000) },
             }));
-        }
-        else if (data.event === 'GET_USER_LIST' && data.status === 'success') {
+        } else if (data.event === 'GET_USER_LIST' && data.status === 'success') {
           if (chatData.userList.length > 0) return;
 
           const conversationUserData: UserInfo[] = [];
           data.data.forEach((conv: any) => {
             // if (conv.name !== userName)
-              conversationUserData.push({name: conv.name, type: conv.type === 1 ? 1 : 0, actionTime: new Date(conv.actionTime)});
+            conversationUserData.push({
+              name: conv.name,
+              type: conv.type === 1 ? 1 : 0,
+              actionTime: new Date(conv.actionTime),
+            });
           });
           console.log('conversationUserData', conversationUserData);
           dispatch(setChatDataUsers(conversationUserData));
@@ -64,13 +66,14 @@ const Sidebar = () => {
         <div className="bg-slate-200 p-[0.5px] mt-1"></div>
 
         <div className="h-[calc(100vh-69px)] overflow-x-hidden overflow-y-auto scrollbar">
-            {chatData.userList.length === 0 && (
+          {chatData.userList.length === 0 && (
             <p className="text-lg text-center text-slate-400 pt-5">
               Explore users to start a conversation with.
             </p>
           )}
-            {chatData.userList && chatData.userList.map((user, index) => (
-                <SideBarItem key={index} type={user.type === 1 ? 1 : 0} name={user.name} actionTime={user.actionTime!} unseen={false} />
+          {chatData.userList && chatData.userList.map((user, index) => (
+            <SideBarItem key={index} type={user.type === 1 ? 1 : 0} name={user.name} actionTime={user.actionTime!}
+                         seen={true} />
           ))}
         </div>
       </div>

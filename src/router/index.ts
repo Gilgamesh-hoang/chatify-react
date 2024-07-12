@@ -1,11 +1,10 @@
-import React from "react";
-import DefaultLayout from "../layout/DefaultLayout";
-import Login from "../pages/Login";
-import NoLayout from "../layout/NoLayout";
-import Register from "../pages/Register";
-import Home from "../pages/Home";
-import MessagePage from "~/pages/component/chatbox/MessagePage";
-import App from "~/App";
+import React from 'react';
+import DefaultLayout from '../layout/DefaultLayout';
+import Login from '../pages/Login';
+import NoLayout from '../layout/NoLayout';
+import Register from '../pages/Register';
+import Home from '../pages/Home';
+import MessagePage from '~/pages/component/chatbox/MessagePage';
 
 export interface RouteType {
     path: string;

@@ -160,7 +160,15 @@ const chatDataSlice = createSlice({
     },
     // on received or sent message, do the classic
     setUpdateNewMessage: (state, action: PayloadAction<{ type: 'sent' | 'received', message: Message }>) => {
-      const receiver = action.payload.type === 'received' ? (action.payload.message.type === 1 ? action.payload.message.to : action.payload.message.name) : action.payload.message.to;
+      // If the message is received and its type is 1, the receiver is the 'to' field of the message
+      // If the message is received and its type is not 1, the receiver is the 'name' field of the message
+      // If the message is not received, the receiver is the 'to' field of the message
+      const receiver = action.payload.type === 'received' ?
+        (action.payload.message.type === 1 ?
+          action.payload.message.to
+          : action.payload.message.name)
+        : action.payload.message.to;
+
       // first, find the user with the name
       const index = state.userList.findIndex((user) => user.name === receiver);
       // if founded
