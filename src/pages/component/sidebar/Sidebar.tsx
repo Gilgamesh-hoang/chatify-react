@@ -101,7 +101,7 @@ const Sidebar = () => {
                 type={user.type === 1 ? 1 : 0}
                 name={user.name}
                 actionTime={user.actionTime!}
-                unseen={false}
+                seen={false}
               />
             ))}
         </div>

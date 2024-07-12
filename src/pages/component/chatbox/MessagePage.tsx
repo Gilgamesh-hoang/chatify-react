@@ -1,10 +1,4 @@
-import React, {
-  ChangeEvent,
-  FormEvent,
-  useEffect,
-  useRef,
-  useState,
-} from 'react';
+import React, { ChangeEvent, FormEvent, useEffect, useRef, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { HiDotsVertical } from 'react-icons/hi';
 import { FaAngleLeft } from 'react-icons/fa6';
@@ -14,11 +8,7 @@ import { Link, useParams } from 'react-router-dom';
 
 import Avatar from '~/component/Avatar';
 import backgroundImage from '~/assets/wallapaper.jpeg';
-import {
-  chatDataSelector,
-  socketSelector,
-  userSelector,
-} from '~/redux/selector';
+import { chatDataSelector, socketSelector, userSelector } from '~/redux/selector';
 import uploadFile from '~/helper/uploadFile';
 import { SocketEvent } from '~/model/SocketEvent';
 import { AppDispatch } from '~/redux/store';
@@ -27,19 +17,14 @@ import FileUpload from '~/component/FileUpload';
 import FilePreview from '~/component/FilePreview';
 import MessageItem from '~/pages/component/chatbox/MessageItem';
 import EmojiPicker from '~/component/EmojiPicker';
-import {
-  appendMessageListToChat,
-  Message,
-  setChatDataUserOnline,
-  setUpdateNewMessage,
-} from '~/redux/chatDataSlice';
+import { appendMessageListToChat, Message, setChatDataUserOnline, setUpdateNewMessage } from '~/redux/chatDataSlice';
 import languageUtil from '~/utils/languageUtil';
-import { IoChevronDown, IoChevronUp, IoClose, IoSearch } from 'react-icons/io5';
+import { IoSearch } from 'react-icons/io5';
 import clsx from 'clsx';
-import { isCloudinaryURL, isValidURL } from '~/utils/linkUtil';
 import MessageHeader from '~/pages/component/chatbox/MessageHeader';
 import Loading from '~/pages/component/Loading';
 import ChatInfoPopup from '~/pages/component/chatbox/ChatInfoPopup';
+import SearchMessageBar from '~/component/SearchMessageBar';
 
 interface FileUploadProps {
   isImage: boolean;
@@ -59,7 +44,7 @@ const MessagePage = () => {
   const webSocket = useSelector(socketSelector);
   const [loading, setLoading] = useState(false);
   const [selectedFile, setSelectedFile] = useState<FileUploadProps | null>(
-    null
+    null,
   );
   const currentMessage = useRef<HTMLDivElement>(null);
   // send message
@@ -130,8 +115,8 @@ const MessagePage = () => {
             currentChat.type === 0
               ? 'people'
               : currentChat.type === 1
-              ? 'room'
-              : '',
+                ? 'room'
+                : '',
           to: currentChat.name,
           mes: languageUtil.utf8ToBase64(message),
         },
@@ -220,7 +205,7 @@ const MessagePage = () => {
           (message: Message) =>
             (response.event !== 'GET_ROOM_CHAT_MES' &&
               message.name === currentChat.name) ||
-            message.to === currentChat.name
+            message.to === currentChat.name,
         );
 
         //and set the preferred chat to the screen
@@ -230,12 +215,12 @@ const MessagePage = () => {
             type: currentChat.type === 0 ? 0 : 1,
             page: chatInfo.page + 1 + chatInfo.offset / 50,
             messages: filteredMessages,
-          })
+          }),
         );
       } else if (response.status === 'error') {
         toast.error(
           'Error when get chat message of '.concat(name || 'unknown'),
-          { duration: 2000 }
+          { duration: 2000 },
         );
       }
       webSocket.removeEventListener('message', handleLoadMoreMessages);
@@ -288,7 +273,7 @@ const MessagePage = () => {
             name: currentChat.name,
             type: currentChat.type === 0 ? 0 : 1,
             online: response.data.status,
-          })
+          }),
         );
       } else if (response.status === 'error') {
         toast.error('Error when get status of '.concat(name || 'unknown'), {
@@ -326,47 +311,6 @@ const MessagePage = () => {
     event.currentTarget.rows = isWarpTooMuch ? 2 : 1;
   };
 
-  // do the search chat
-  const filterSearch = (queryString: string, keepCursor: boolean) => {
-    if (!chatInfo) return;
-    if (!chatInfo.messages) return;
-    // create a founded array contains INDEXES of messages
-    const founded: number[] = [];
-    // if query string exists...
-    if (queryString.length > 0)
-      // find indexes of messages that are url but not Cloudinary URL or just plain text
-      chatInfo.messages.forEach((message, index) => {
-        const trueMessage = languageUtil.base64ToUtf8(message.mes);
-        if (!isCloudinaryURL(trueMessage) || !isValidURL(trueMessage))
-          if (
-            languageUtil
-              .base64ToUtf8(message.mes)
-              .match(new RegExp(`(${queryString})`, 'gi')) != null
-          )
-            founded.push(index);
-      });
-    // update the search results with those indexes AND search cursor
-    setSearchResult(founded);
-    // keep cursor to not reset back to 1st search result
-    if (!keepCursor) setSearchCursor(founded.length > 0 ? 0 : -1);
-    // set the search query string
-    searchInput.current = queryString;
-  };
-
-  // On 'message' updated (via send, received, load more message), filter search them
-  useEffect(() => {
-    filterSearch(searchInput.current, true);
-  }, [chatInfo?.messages]);
-
-  // On 'search focus' change, focus the founded message
-  useEffect(() => {
-    if (searchFocus.current)
-      searchFocus.current.scrollIntoView({
-        behavior: 'smooth',
-        block: 'start',
-      });
-  }, [searchState, searchCursor]);
-
   useEffect(() => {
     currentMessage.current?.scrollIntoView({ behavior: 'auto', block: 'end' });
     setTimeout(() => {
@@ -377,19 +321,26 @@ const MessagePage = () => {
     }, 500);
   }, [chatLatestMessage]);
 
-  // on submit search, do the filter search
-  const handleSearchSubmit = (evt: React.FormEvent<HTMLFormElement>) => {
-    evt.preventDefault();
-    // get the input from the form then filter search it
-    const inputData = (evt.currentTarget.elements[0] as HTMLInputElement).value;
-    filterSearch(inputData, false);
+  const handlePaste = (event: React.ClipboardEvent<HTMLTextAreaElement>) => {
+    // Access the items from the clipboard
+    const clipboardItems = event.clipboardData.items;
+
+    for (let i = 0; i < clipboardItems.length; i++) {
+      const item = clipboardItems[i];
+      const handleFile = (type: string, blob: File | null) => {
+        if (blob) {
+          setSelectedFile({ isImage: type === 'image', file: blob });
+          return true;
+        }
+        return false;
+      };
+
+      if (['image', 'video'].some(type => item.type.startsWith(type) && handleFile(type, item.getAsFile()))) {
+        break;
+      }
+    }
   };
 
-  // clear input and hide the reset button
-  const handleResetVisible = (evt: ChangeEvent<HTMLInputElement>) => {
-    const hasText = evt.currentTarget.value.trim().length === 0;
-    if (searchResetBtn.current) searchResetBtn.current.hidden = hasText;
-  };
   return (
     <>
       <Toaster position="top-center" reverseOrder={false} />
@@ -449,73 +400,24 @@ const MessagePage = () => {
 
         {/***searching ui*/}
         {searchState && (
-          <div className="h-12 bg-white flex px-4 gap-2 items-center">
-            {/*search input*/}
-            <form
-              className="h-full grow flex gap-2 items-center "
-              onSubmit={handleSearchSubmit}
-              onReset={() => {
-                if (searchResetBtn.current)
-                  searchResetBtn.current.hidden = true;
-              }}
-            >
-              <input
-                type="text"
-                placeholder="Search here..."
-                className="py-1 px-4 outline-none w-full h-fit"
-                onChange={handleResetVisible}
-              />
-              <button type="reset" ref={searchResetBtn} hidden>
-                <IoClose size={20} className="text-secondary" />
-              </button>
-              <button
-                type="submit"
-                className="text-primary hover:text-secondary"
-              >
-                <IoSearch size={24} />
-              </button>
-            </form>
-            {/*Result tracker*/}
-            <span className="h-fit text-sm">
-              {searchResult.length > 0
-                ? `${searchCursor + 1} of ${searchResult.length} message${
-                    searchResult.length > 1 ? 's' : ''
-                  }`
-                : 'No message founded'}
-            </span>
-
-            {/*Next founded message*/}
-            <button
-              disabled={searchCursor >= searchResult.length - 1}
-              className="disabled:text-gray-400"
-              onClick={() => setSearchCursor((prev) => prev + 1)}
-              title="Next founded message"
-            >
-              <IoChevronUp size={24} />
-            </button>
-
-            {/*Prev founded message*/}
-            <button
-              disabled={searchCursor <= 0}
-              className="disabled:text-gray-400"
-              onClick={() => setSearchCursor((prev) => prev - 1)}
-              title="Previous founded message"
-            >
-              <IoChevronDown size={24} />
-            </button>
-
-            {/*Close button*/}
-            <button>
-              <IoClose size={24} onClick={() => setSearchState(false)} />
-            </button>
-          </div>
+          <SearchMessageBar
+            searchState={searchState}
+            searchFocus={searchFocus}
+            searchInput={searchInput}
+            chatInfo={chatInfo}
+            setSearchState={setSearchState}
+            searchResult={searchResult}
+            searchCursor={searchCursor}
+            setSearchCursor={setSearchCursor}
+            setSearchResult={setSearchResult}
+          />
         )}
 
         {/***show all messages */}
         <section
           className={clsx(
             `h-[calc(100vh-128px)] overflow-x-hidden overflow-y-scroll scrollbar relative bg-slate-200 bg-opacity-50 `,
-            searchState && 'h-[calc(100vh-128px-3rem)]'
+            searchState && 'h-[calc(100vh-128px-3rem)]',
           )}
         >
           {/**all messages show here, note: it's in reverse order aka the elements are place upward */}
@@ -610,7 +512,7 @@ const MessagePage = () => {
           >
             <textarea
               rows={1}
-              className="py-1 px-4 outline-none w-full h-fit resize-none disabled:text-gray-500"
+              className="py-1 px-4 w-full h-fit resize-none disabled:text-gray-500 border-none"
               onKeyDown={(event) => {
                 // On plain enter or ctrl + enter, send message.
                 // On shift + enter or alt + enter, add a new line to it
@@ -623,6 +525,7 @@ const MessagePage = () => {
                 }
               }}
               onChange={handleSizeChange}
+              onPaste={handlePaste}
               ref={inputRef}
               placeholder="Type message here"
             />
