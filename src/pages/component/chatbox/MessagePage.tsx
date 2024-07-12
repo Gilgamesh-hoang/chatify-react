@@ -1,10 +1,4 @@
-import React, {
-  ChangeEvent,
-  FormEvent,
-  useEffect,
-  useRef,
-  useState,
-} from 'react';
+import React, { ChangeEvent, FormEvent, useEffect, useRef, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { HiDotsVertical } from 'react-icons/hi';
 import { FaAngleLeft } from 'react-icons/fa6';
@@ -14,11 +8,7 @@ import { Link, useParams } from 'react-router-dom';
 
 import Avatar from '~/component/Avatar';
 import backgroundImage from '~/assets/wallapaper.jpeg';
-import {
-  chatDataSelector,
-  socketSelector,
-  userSelector,
-} from '~/redux/selector';
+import { chatDataSelector, socketSelector, userSelector } from '~/redux/selector';
 import uploadFile from '~/helper/uploadFile';
 import { SocketEvent } from '~/model/SocketEvent';
 import { AppDispatch } from '~/redux/store';
@@ -27,12 +17,7 @@ import FileUpload from '~/component/FileUpload';
 import FilePreview from '~/component/FilePreview';
 import MessageItem from '~/pages/component/chatbox/MessageItem';
 import EmojiPicker from '~/component/EmojiPicker';
-import {
-  appendMessageListToChat,
-  Message,
-  setChatDataUserOnline,
-  setUpdateNewMessage,
-} from '~/redux/chatDataSlice';
+import { appendMessageListToChat, Message, setChatDataUserOnline, setUpdateNewMessage } from '~/redux/chatDataSlice';
 import languageUtil from '~/utils/languageUtil';
 import { IoChevronDown, IoChevronUp, IoClose, IoSearch } from 'react-icons/io5';
 import clsx from 'clsx';
@@ -59,7 +44,7 @@ const MessagePage = () => {
   const webSocket = useSelector(socketSelector);
   const [loading, setLoading] = useState(false);
   const [selectedFile, setSelectedFile] = useState<FileUploadProps | null>(
-    null
+    null,
   );
   const currentMessage = useRef<HTMLDivElement>(null);
   // send message
@@ -130,8 +115,8 @@ const MessagePage = () => {
             currentChat.type === 0
               ? 'people'
               : currentChat.type === 1
-              ? 'room'
-              : '',
+                ? 'room'
+                : '',
           to: currentChat.name,
           mes: languageUtil.utf8ToBase64(message),
         },
@@ -220,7 +205,7 @@ const MessagePage = () => {
           (message: Message) =>
             (response.event !== 'GET_ROOM_CHAT_MES' &&
               message.name === currentChat.name) ||
-            message.to === currentChat.name
+            message.to === currentChat.name,
         );
 
         //and set the preferred chat to the screen
@@ -230,12 +215,12 @@ const MessagePage = () => {
             type: currentChat.type === 0 ? 0 : 1,
             page: chatInfo.page + 1 + chatInfo.offset / 50,
             messages: filteredMessages,
-          })
+          }),
         );
       } else if (response.status === 'error') {
         toast.error(
           'Error when get chat message of '.concat(name || 'unknown'),
-          { duration: 2000 }
+          { duration: 2000 },
         );
       }
       webSocket.removeEventListener('message', handleLoadMoreMessages);
@@ -288,7 +273,7 @@ const MessagePage = () => {
             name: currentChat.name,
             type: currentChat.type === 0 ? 0 : 1,
             online: response.data.status,
-          })
+          }),
         );
       } else if (response.status === 'error') {
         toast.error('Error when get status of '.concat(name || 'unknown'), {
@@ -390,6 +375,26 @@ const MessagePage = () => {
     const hasText = evt.currentTarget.value.trim().length === 0;
     if (searchResetBtn.current) searchResetBtn.current.hidden = hasText;
   };
+
+  const handlePaste = (event: React.ClipboardEvent<HTMLTextAreaElement>) => {
+    // Access the items from the clipboard
+    const clipboardItems = event.clipboardData.items;
+
+    for (let i = 0; i < clipboardItems.length; i++) {
+      const item = clipboardItems[i];
+
+      // Check if the item type is an image
+      if (item.type.indexOf('image') !== -1) {
+        // Get the item as a File object
+        const blob = item.getAsFile();
+        if (blob) {
+          setSelectedFile({ isImage: true, file: blob });
+          break;
+        }
+      }
+    }
+  };
+
   return (
     <>
       <Toaster position="top-center" reverseOrder={false} />
@@ -462,7 +467,7 @@ const MessagePage = () => {
               <input
                 type="text"
                 placeholder="Search here..."
-                className="py-1 px-4 outline-none w-full h-fit"
+                className="py-1 px-4 outline-none w-full h-fit rounded-[6px] border-gray-300"
                 onChange={handleResetVisible}
               />
               <button type="reset" ref={searchResetBtn} hidden>
@@ -479,8 +484,8 @@ const MessagePage = () => {
             <span className="h-fit text-sm">
               {searchResult.length > 0
                 ? `${searchCursor + 1} of ${searchResult.length} message${
-                    searchResult.length > 1 ? 's' : ''
-                  }`
+                  searchResult.length > 1 ? 's' : ''
+                }`
                 : 'No message founded'}
             </span>
 
@@ -515,7 +520,7 @@ const MessagePage = () => {
         <section
           className={clsx(
             `h-[calc(100vh-128px)] overflow-x-hidden overflow-y-scroll scrollbar relative bg-slate-200 bg-opacity-50 `,
-            searchState && 'h-[calc(100vh-128px-3rem)]'
+            searchState && 'h-[calc(100vh-128px-3rem)]',
           )}
         >
           {/**all messages show here, note: it's in reverse order aka the elements are place upward */}
@@ -610,7 +615,7 @@ const MessagePage = () => {
           >
             <textarea
               rows={1}
-              className="py-1 px-4 outline-none w-full h-fit resize-none disabled:text-gray-500"
+              className="py-1 px-4 w-full h-fit resize-none disabled:text-gray-500 border-none"
               onKeyDown={(event) => {
                 // On plain enter or ctrl + enter, send message.
                 // On shift + enter or alt + enter, add a new line to it
@@ -623,6 +628,7 @@ const MessagePage = () => {
                 }
               }}
               onChange={handleSizeChange}
+              onPaste={handlePaste}
               ref={inputRef}
               placeholder="Type message here"
             />
