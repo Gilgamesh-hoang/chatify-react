@@ -72,8 +72,12 @@ const MessagePage = () => {
   // get chat data info
   const dispatch = useDispatch<AppDispatch>();
   const chatData = useSelector(chatDataSelector);
-  const chatInfo = chatData.userList.find((userInfo) => userInfo.name === name && userInfo.type === currentChat.type);
-  const chatLatestMessage = chatInfo && chatInfo.messages && chatInfo.messages.length > 0 ? chatInfo.messages[0] : null;
+  const chatInfo = chatData.userList.find((userInfo) => userInfo.name === name);
+  const chatLatestMessage =
+    chatInfo && chatInfo.messages && chatInfo.messages.length > 0
+      ? chatInfo.messages[0]
+      : null;
+
   // for searching purposes only
   const [searchState, setSearchState] = useState(false);
   const [searchResult, setSearchResult] = useState<number[]>([]);

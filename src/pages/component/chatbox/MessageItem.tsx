@@ -1,5 +1,10 @@
-import moment from 'moment';
-import { isCloudinaryURL, isValidURL, isYoutubeURL, splitWithURLs } from '~/utils/linkUtil';
+import moment, { now } from 'moment';
+import {
+  isCloudinaryURL,
+  isValidURL,
+  isYoutubeURL,
+  splitWithURLs,
+} from '~/utils/linkUtil';
 import { FileType } from '~/model/FileType';
 import imageError from '~/assets/image-error.png';
 import Avatar from '~/component/Avatar';
@@ -27,14 +32,18 @@ interface MessageItemProps {
   roomOwner?: string;
 }
 
-const MessageItem: React.FC<MessageItemProps> = ({ msg, username, type, selected, querySearch, roomOwner }) => {
+const MessageItem: React.FC<MessageItemProps> = ({
+  msg,
+  username,
+  type,
+  selected,
+  querySearch,
+  roomOwner,
+}) => {
   const [isImageError, setImageError] = useState(false);
-  const TIMEZONE_OFFSET = 7 * 3600 * 1000; //GMT+7
-  const realCreateAt = new Date(
-    new Date(msg.createAt).getTime() + TIMEZONE_OFFSET,
-  ); //True time
-
-
+  const TIMEZONE_OFFSET = 7 * 3600 * 1000; // GMT+7 in milliseconds
+  const timeMsg = msg.createAt ? new Date(msg.createAt) : new Date();
+  const realCreateAt = new Date(timeMsg.getTime() + TIMEZONE_OFFSET); //True time
   const renderMessageContent = (mes: string) => {
     const utf8msg = languageUtil.base64ToUtf8(mes);
     // split the strings with the search query included (case-insensitive + global)
@@ -43,12 +52,14 @@ const MessageItem: React.FC<MessageItemProps> = ({ msg, username, type, selected
       if (cloudinaryURL) {
         if (cloudinaryURL.isImage) {
           return (
-            <Tippy placement="right-start" content={<FileDownload url={utf8msg} />}
-                   interactive={true}
-                   delay={[200, 100]}
-                   animation={'shift-away'}
-                   theme={'translucent'}
-                   disabled={isImageError}
+            <Tippy
+              placement="right-start"
+              content={<FileDownload url={utf8msg} />}
+              interactive={true}
+              delay={[200, 100]}
+              animation={'shift-away'}
+              theme={'translucent'}
+              disabled={isImageError}
             >
               <img
                 src={utf8msg}
@@ -76,53 +87,104 @@ const MessageItem: React.FC<MessageItemProps> = ({ msg, username, type, selected
         const split = utf8msg.split(new RegExp(`(${querySearch})`, 'gi'));
         return (
           <>
-            <a href={utf8msg} target="_blank" rel="noreferrer" className={'px-2 break-words text-blue-500 underline'}>
+            <a
+              href={utf8msg}
+              target="_blank"
+              rel="noreferrer"
+              className={'px-2 break-words text-blue-500 underline'}
+            >
               {
                 // if there is query search, try to highlight the keywords. else render normal message
-                querySearch ?
-                  split.map((part, index) =>
-                    <span key={index}
-                          className={part.toLowerCase() === querySearch.toLowerCase() ? 'bg-yellow-300' : ''}>
+                querySearch ? (
+                  split.map((part, index) => (
+                    <span
+                      key={index}
+                      className={
+                        part.toLowerCase() === querySearch.toLowerCase()
+                          ? 'bg-yellow-300'
+                          : ''
+                      }
+                    >
                       {part}
-                    </span>) : <span>{utf8msg}</span>
+                    </span>
+                  ))
+                ) : (
+                  <span>{utf8msg}</span>
+                )
               }
             </a>
             <MessageEmbedItem url={utf8msg} width={'100%'} height={240} />
           </>
-
         );
       }
     } else {
       // here it tries to find section that has URL on top of highlight searching keyword
       const splitMessageWithURL = splitWithURLs(utf8msg);
-      const splitPartWithQuerySearch = (part: string) => part.split(new RegExp(`(${querySearch})`, 'gi'));
-      return <>
-        <p className={'px-2 break-words whitespace-pre-wrap'}>
-        {
-          splitMessageWithURL.map((part, index) => isValidURL(part) ?
-            <a key={index} href={part} target="_blank" rel="noreferrer" className={'text-blue-500 underline'}>
-              {
-                querySearch ?
-                  splitPartWithQuerySearch(part).map((queryPart, queryIndex) =>
-                    <span key={queryIndex} className={queryPart.toLowerCase() === querySearch.toLowerCase() ? 'bg-yellow-300' : ''}>
-                    {queryPart}</span>) : part
-              }
-            </a>
-            : <span key={index}>
-              {
-                querySearch ?
-                  splitPartWithQuerySearch(part).map((queryPart, queryIndex) =>
-                    <span key={queryIndex}
-                          className={queryPart.toLowerCase() === querySearch.toLowerCase() ? 'bg-yellow-300' : ''}>
-                    {queryPart}</span>) : part
-              }
-            </span>)
-        }
-      </p>
-        {
-          splitMessageWithURL.map((part, index) => isValidURL(part) &&
-            <div className="my-2"><MessageEmbedItem url={part} width={'100%'} height={240} /></div>)
-        }</>;
+      const splitPartWithQuerySearch = (part: string) =>
+        part.split(new RegExp(`(${querySearch})`, 'gi'));
+      return (
+        <>
+          <p className={'px-2 break-words whitespace-pre-wrap'}>
+            {splitMessageWithURL.map((part, index) =>
+              isValidURL(part) ? (
+                <a
+                  key={index}
+                  href={part}
+                  target="_blank"
+                  rel="noreferrer"
+                  className={'text-blue-500 underline'}
+                >
+                  {querySearch
+                    ? splitPartWithQuerySearch(part).map(
+                        (queryPart, queryIndex) => (
+                          <span
+                            key={queryIndex}
+                            className={
+                              queryPart.toLowerCase() ===
+                              querySearch.toLowerCase()
+                                ? 'bg-yellow-300'
+                                : ''
+                            }
+                          >
+                            {queryPart}
+                          </span>
+                        )
+                      )
+                    : part}
+                </a>
+              ) : (
+                <span key={index}>
+                  {querySearch
+                    ? splitPartWithQuerySearch(part).map(
+                        (queryPart, queryIndex) => (
+                          <span
+                            key={queryIndex}
+                            className={
+                              queryPart.toLowerCase() ===
+                              querySearch.toLowerCase()
+                                ? 'bg-yellow-300'
+                                : ''
+                            }
+                          >
+                            {queryPart}
+                          </span>
+                        )
+                      )
+                    : part}
+                </span>
+              )
+            )}
+          </p>
+          {splitMessageWithURL.map(
+            (part, index) =>
+              isValidURL(part) && (
+                <div className="my-2">
+                  <MessageEmbedItem url={part} width={'100%'} height={240} />
+                </div>
+              )
+          )}
+        </>
+      );
     }
   };
 
@@ -135,18 +197,35 @@ const MessageItem: React.FC<MessageItemProps> = ({ msg, username, type, selected
   //for case group
   const renderAvatar = () => {
     return (
-      <Tippy placement="right-start"
-             content={<ChatUserMenu userName={msg.name} onClose={hide} onInfoClick={() => setPopup(true)}
-                                    onAddUser={() => setAddUser(true)} />}
-             interactive={true}
-             delay={[100, 100]}
-             animation={'shift-away'}
-             theme={'translucent'}
-             visible={visible}
-             onClickOutside={hide}
+      <Tippy
+        placement="right-start"
+        content={
+          <ChatUserMenu
+            userName={msg.name}
+            onClose={hide}
+            onInfoClick={() => setPopup(true)}
+            onAddUser={() => setAddUser(true)}
+          />
+        }
+        interactive={true}
+        delay={[100, 100]}
+        animation={'shift-away'}
+        theme={'translucent'}
+        visible={visible}
+        onClickOutside={hide}
       >
-        <div className="px-2 self-start" title={msg.name} onClick={visible ? hide : show}>
-          <Avatar width={35} height={35} type={0} name={msg.name} owner={msg.name === roomOwner} />
+        <div
+          className="px-2 self-start"
+          title={msg.name}
+          onClick={visible ? hide : show}
+        >
+          <Avatar
+            width={35}
+            height={35}
+            type={0}
+            name={msg.name}
+            owner={msg.name === roomOwner}
+          />
         </div>
       </Tippy>
     );
@@ -155,24 +234,45 @@ const MessageItem: React.FC<MessageItemProps> = ({ msg, username, type, selected
   return (
     <div className={'flex'}>
       {type === 1 && msg.name !== username && renderAvatar()}
-      <div className={clsx(` p-1 rounded w-fit max-w-[243px] md:max-w-sm lg:max-w-md`,
-        username === msg.name ? 'ml-auto bg-teal-100 max-w-[280px]' : 'bg-white',
-        selected && 'border-2 border-secondary p-[2.4px]')}>
-        <div className="w-full relative">
-          {renderMessageContent(msg.mes)}
-        </div>
-        <p className={`px-1 text-xs w-fit ${username === msg.name ? 'ml-auto' : ''}`}>
+      <div
+        className={clsx(
+          ` p-1 rounded w-fit max-w-[243px] md:max-w-sm lg:max-w-md`,
+          username === msg.name
+            ? 'ml-auto bg-teal-100 max-w-[280px]'
+            : 'bg-white',
+          selected && 'border-2 border-secondary p-[2.4px]'
+        )}
+      >
+        <div className="w-full relative">{renderMessageContent(msg.mes)}</div>
+        <p
+          className={`px-1 text-xs w-fit ${
+            username === msg.name ? 'ml-auto' : ''
+          }`}
+        >
           {moment(realCreateAt).isSame(new Date(), 'day')
             ? moment(realCreateAt).format('HH:mm')
             : moment(realCreateAt).format('DD/MM/YYYY HH:mm')}
         </p>
       </div>
-      {popup && <ChatInfoPopup type={0} name={msg.name} onClose={() => setPopup(false)} />}
-      {addUser && <AddUser username={msg.name} onClose={() => setAddUser(false)} />}
+      {popup && (
+        <ChatInfoPopup
+          type={0}
+          name={msg.name}
+          onClose={() => setPopup(false)}
+        />
+      )}
+      {addUser && (
+        <AddUser username={msg.name} onClose={() => setAddUser(false)} />
+      )}
     </div>
   );
 };
 
 // I set the condition for props to be count for 'dirty'
-export default React.memo(MessageItem, (p, n) =>
-  p.msg.createAt.getTime() === n.msg.createAt.getTime() && p.querySearch === n.querySearch && p.selected === n.selected);
+export default React.memo(
+  MessageItem,
+  (p, n) =>
+    p.msg.createAt.getTime() === n.msg.createAt.getTime() &&
+    p.querySearch === n.querySearch &&
+    p.selected === n.selected
+);
