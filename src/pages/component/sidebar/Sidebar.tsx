@@ -1,18 +1,28 @@
 import React, { useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { chatDataSelector, socketSelector, socketStatusSelector, userSelector } from '~/redux/selector';
+import {
+  chatDataSelector,
+  socketSelector,
+  socketStatusSelector,
+  userSelector,
+} from '~/redux/selector';
 import { UserState } from '~/redux/userSlice';
 import { SideBarItem } from '~/pages/component/sidebar';
 import NavSideBar from '~/pages/component/NavSideBar';
 import { SocketEvent } from '~/model/SocketEvent';
 import { AppDispatch } from '~/redux/store';
 import { socketSendMessage } from '~/redux/socketSlice';
-import { setChatDataUsers, setUpdateNewMessage, UserInfo } from '~/redux/chatDataSlice';
+import {
+  setChatDataUsers,
+  setUpdateNewMessage,
+  UserInfo,
+} from '~/redux/chatDataSlice';
 
 const Sidebar = () => {
   const user: UserState = useSelector(userSelector);
   const chatData = useSelector(chatDataSelector);
   const userName = user.username;
+  // const socket = useSelector(socketSelector);
   const socket = useSelector(socketSelector);
   const statusSocket = useSelector(socketStatusSelector);
   const dispatch = useDispatch<AppDispatch>();
@@ -30,22 +40,35 @@ const Sidebar = () => {
         // I wanted to reload sidebar item, but it's glitching so not yet
         if (data.event === 'SEND_CHAT' && data.status === 'success') {
           if (data.data.name !== data.data.to)
-            dispatch(setUpdateNewMessage({
-              type: 'received',
-              message: { ...data.data, createAt: new Date(Date.now() - 7 * 3600 * 1000) },
-            }));
-        } else if (data.event === 'GET_USER_LIST' && data.status === 'success') {
-          if (chatData.userList.length > 0) return;
+            dispatch(
+              setUpdateNewMessage({
+                type: 'received',
+                message: {
+                  ...data.data,
+                  createAt: new Date(Date.now() - 7 * 3600 * 1000),
+                },
+              })
+            );
+        } else if (
+          data.event === 'GET_USER_LIST' &&
+          data.status === 'success'
+        ) {
+          // if (chatData.userList.length > 0) return;
 
           const conversationUserData: UserInfo[] = [];
+          const tempArray: UserInfo[] = [];
+
           data.data.forEach((conv: any) => {
-            // if (conv.name !== userName)
-            conversationUserData.push({
+            tempArray.push({
               name: conv.name,
               type: conv.type === 1 ? 1 : 0,
               actionTime: new Date(conv.actionTime),
             });
           });
+          tempArray.sort(
+            (a, b) => b.actionTime!.getTime() - a.actionTime!.getTime()
+          );
+          tempArray.forEach((item) => conversationUserData.push(item));
           console.log('conversationUserData', conversationUserData);
           dispatch(setChatDataUsers(conversationUserData));
         }
@@ -71,10 +94,16 @@ const Sidebar = () => {
               Explore users to start a conversation with.
             </p>
           )}
-          {chatData.userList && chatData.userList.map((user, index) => (
-            <SideBarItem key={index} type={user.type === 1 ? 1 : 0} name={user.name} actionTime={user.actionTime!}
-                         seen={true} />
-          ))}
+          {chatData.userList &&
+            chatData.userList.map((user, index) => (
+              <SideBarItem
+                key={index}
+                type={user.type === 1 ? 1 : 0}
+                name={user.name}
+                actionTime={user.actionTime!}
+                seen={false}
+              />
+            ))}
         </div>
       </div>
     </div>

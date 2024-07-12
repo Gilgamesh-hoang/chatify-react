@@ -7,6 +7,9 @@ import { BiLogOut } from 'react-icons/bi';
 import React, { useState } from 'react';
 import AddUser from './AddUser';
 import SearchUser from './SearchUser';
+import ChatInfoPopup from '~/pages/component/chatbox/ChatInfoPopup';
+import { MdGroups } from 'react-icons/md';
+import GroupModal from './GroupModal';
 
 interface NavSideBarProps {
   name: string;
@@ -15,6 +18,8 @@ interface NavSideBarProps {
 const NavSideBar: React.FC<NavSideBarProps> = ({ name }) => {
   const [openAddUser, setOpenAddUser] = useState(false);
   const [openSearchUser, setOpenSearchUser] = useState(false);
+  const [openUserInfo, setOpenUserInfo] = useState(false);
+  const [openGroupModal, setOpenGroupModal] = useState(false);
   const handleLogout = () => {
     localStorage.clear();
     window.location.href = '/login';
@@ -43,6 +48,13 @@ const NavSideBar: React.FC<NavSideBarProps> = ({ name }) => {
           <FaUserPlus size={25} />
         </div>
         <div
+          title="Group chat"
+          onClick={() => setOpenGroupModal(true)}
+          className={`w-12 h-12 flex justify-center items-center cursor-pointer hover:bg-slate-200 rounded`}
+        >
+          <MdGroups size={25} />
+        </div>
+        <div
           title="Search user"
           onClick={() => setOpenSearchUser(true)}
           className={`w-12 h-12 flex justify-center items-center cursor-pointer hover:bg-slate-200 rounded`}
@@ -52,7 +64,11 @@ const NavSideBar: React.FC<NavSideBarProps> = ({ name }) => {
       </div>
 
       <div className="flex flex-col items-center">
-        <button className="mx-auto" title={name}>
+        <button
+          className="mx-auto"
+          title={name}
+          onClick={() => setOpenUserInfo(true)}
+        >
           <Avatar type={0} width={40} height={40} name={name} />
         </button>
         <button
@@ -68,6 +84,16 @@ const NavSideBar: React.FC<NavSideBarProps> = ({ name }) => {
       {openAddUser && <AddUser onClose={() => setOpenAddUser(false)} />}
       {openSearchUser && (
         <SearchUser onClose={() => setOpenSearchUser(false)} />
+      )}
+      {openGroupModal && (
+        <GroupModal onClose={() => setOpenGroupModal(false)} />
+      )}
+      {openUserInfo && (
+        <ChatInfoPopup
+          type={0}
+          name={name}
+          onClose={() => setOpenUserInfo(false)}
+        />
       )}
     </div>
   );

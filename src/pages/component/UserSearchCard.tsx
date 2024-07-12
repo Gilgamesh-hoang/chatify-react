@@ -4,9 +4,9 @@ import Avatar from '~/component/Avatar';
 import { UserSideBar } from './SearchUser';
 
 const UserSearchCard = ({
-                          user,
-                          onClose,
-                        }: {
+  user,
+  onClose,
+}: {
   user: UserSideBar;
   onClose: () => void;
 }) => {
@@ -14,7 +14,7 @@ const UserSearchCard = ({
     <Link
       to={'/' + user.type + '/' + user.name}
       onClick={onClose}
-      className="flex items-center gap-3 p-2 lg:p-4 border border-transparent border-b-slate-200 hover:border hover:border-primary rounded cursor-pointer"
+      className="flex items-center  w-full gap-3 p-2 lg:p-4 border border-transparent border-b-slate-200 hover:border hover:border-primary rounded cursor-pointer"
     >
       <div>
         <Avatar type={user.type} width={40} height={40} name={user.name} />

@@ -1,7 +1,6 @@
 import React from 'react';
 import Avatar from '~/component/Avatar';
 import Tippy, { useSingleton } from '@tippyjs/react';
-import ChatUserMenu from '~/pages/component/chatbox/ChatUserMenu';
 import 'tippy.js/animations/shift-away.css';
 import 'tippy.js/dist/tippy.css';
 import 'tippy.js/themes/translucent.css';

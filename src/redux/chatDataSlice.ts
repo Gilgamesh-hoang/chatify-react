@@ -77,9 +77,24 @@ const chatDataSlice = createSlice({
         actionTime: user.actionTime,
       }));
     },
+    // add chat data user
+    addChatDataUser: (state, action: PayloadAction<{ name: string, type: 0 | 1, }>) => {
+      // first, find the user with the name
+      const index = state.userList.findIndex((user) => user.name === action.payload.name && user.type === action.payload.type);
+      // if not founded
+      if (index < 0) {
+        console.log('Adding data for', action.payload.name, action.payload.type);
+        state.userList.unshift({
+          ...defaultChatInfo,
+          name: action.payload.name,
+          type: action.payload.type,
+          actionTime: new Date(Date.now() - 7 * 3600 * 1000),
+        });
+      }
+    },
     // update a chat data room
-    updateChatDataRooms: (state, action: PayloadAction<{ name: string, roomData: RoomChat }>) => {// first, find the user with the name
-      const index = state.userList.findIndex((user) => user.name === action.payload.name);
+    updateChatDataRooms: (state, action: PayloadAction<{ name: string, type: 0|1, roomData: RoomChat }>) => {// first, find the user with the name
+      const index = state.userList.findIndex((user) => user.name === action.payload.name && user.type === action.payload.type);
       // if founded
       if (index >= 0) {
         state.userList[index] = {
@@ -92,29 +107,26 @@ const chatDataSlice = createSlice({
       }
     },
     // set online user
-    setChatDataUserOnline: (state, action: PayloadAction<{ name: string, online: boolean }>) => {
+    setChatDataUserOnline: (state, action: PayloadAction<{ name: string, type: 0|1, online: boolean }>) => {
       // first, find the user with the name
-      const index = state.userList.findIndex((user) => user.name === action.payload.name);
+      const index = state.userList.findIndex((user) => user.name === action.payload.name && user.type === action.payload.type);
       // if founded
       if (index >= 0) {
         if (state.userList[index].online !== action.payload.online)
           state.userList[index].online = action.payload.online;
       } else {
-        alert('Can\'t find the user while set status');
+        console.log('Can\'t find the user while set status');
       }
     },
     // set messages to the list (only get call on startup)
-    setMessageListToChat: (state, action: PayloadAction<{
-      name: string,
-      currentUsername: string,
-      messages: Message[]
-    }>) => {
+    setMessageListToChat: (state, action: PayloadAction<{ name: string, type: 0|1, currentUsername: string, messages: Message[]  }>) => {
       // first, find the user with the name
-      const index = state.userList.findIndex((user) => user.name === action.payload.name);
+      const index = state.userList.findIndex((user) => user.name === action.payload.name && user.type === action.payload.type);
       // if founded
       if (index >= 0) {
         // convert all message date to REAL DATE
         action.payload.messages.forEach((message) => message.createAt = new Date(message.createAt));
+        state.userList[index].page = 1;
         state.userList[index].messages = action.payload.messages;
         state.userList[index].moreMessage = action.payload.messages.length >= 50;
         state.userList[index].offset = 0;
@@ -134,11 +146,13 @@ const chatDataSlice = createSlice({
       }
     },
     // append messages to the list
-    appendMessageListToChat: (state, action: PayloadAction<{ name: string, page: number, messages: Message[] }>) => {
+    appendMessageListToChat: (state, action: PayloadAction<{ name: string, type: 0|1, page: number, messages: Message[] }>) => {
       // first, find the user with the name
-      const index = state.userList.findIndex((user) => user.name === action.payload.name);
+      const index = state.userList.findIndex((user) => user.name === action.payload.name && user.type === action.payload.type);
       // if founded
       if (index >= 0) {
+        console.log(action.payload)
+
         // convert all message date to REAL DATE
         action.payload.messages.forEach((message) => message.createAt = new Date(message.createAt));
         // remove offset amount of message from sending and receiving message.
@@ -155,7 +169,7 @@ const chatDataSlice = createSlice({
         state.userList[index].page = action.payload.page;
         state.userList[index].offset = 0;
       } else {
-        alert('Can\'t find the user list while add messages to list');
+        console.log('Can\'t find the user list while add messages to list');
       }
     },
     // on received or sent message, do the classic
@@ -170,7 +184,7 @@ const chatDataSlice = createSlice({
         : action.payload.message.to;
 
       // first, find the user with the name
-      const index = state.userList.findIndex((user) => user.name === receiver);
+      const index = state.userList.findIndex((user) => user.name === receiver && user.type === action.payload.message.type);
       // if founded
       if (index >= 0) {
         // put the chat data at the top of the list
@@ -198,15 +212,16 @@ const chatDataSlice = createSlice({
         });
       }
     },
-    setReadStatus: (state, action: PayloadAction<{ name: string, seenStatus: boolean }>) => {
+    // on check status
+    setReadStatus: (state, action: PayloadAction<{ name: string, type: 0|1, seenStatus: boolean }>) => {
       // first, find the user with the name
-      const index = state.userList.findIndex((user) => user.name === action.payload.name);
+      const index = state.userList.findIndex((user) => user.name === action.payload.name && user.type === action.payload.type);
       // if founded
       if (index >= 0) {
         // put new message in here
         state.userList[index].read = action.payload.seenStatus;
       } else {
-        alert('Can\'t find the user list while on received');
+        console.log('Can\'t find the user list while on received');
       }
     },
   },
@@ -216,6 +231,7 @@ const chatDataSlice = createSlice({
 // Action creators are generated for each case reducer function
 export const {
   setChatDataUsers,
+  addChatDataUser,
   setChatDataUserOnline,
   setMessageListToChat,
   setUpdateNewMessage,

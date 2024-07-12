@@ -8,7 +8,6 @@ import { socketSelector, socketStatusSelector, userSelector, } from './redux/sel
 import { AppDispatch, } from './redux/store';
 import { socketConnect, socketSendMessage } from './redux/socketSlice';
 import { SocketEvent } from './model/SocketEvent';
-import { message } from 'antd';
 
 function App() {
   const token = localStorage.getItem('token') ?? '';
