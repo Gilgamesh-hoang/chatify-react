@@ -120,10 +120,10 @@ const SideBarItem: React.FC<SideBarProp> = (props) => {
 
   useEffect(() => {
     if (timeRef.current)
-      timeRef.current.innerHTML = chatInfo && chatInfo.messages && chatInfo.messages.length > 0 ? getTime(chatInfo.messages[0].createAt) : '';
+      timeRef.current.innerHTML = chatInfo && chatInfo.messages && chatInfo.messages.length > 0 ? getTime(chatInfo.messages[0].createAt) : getTime(new Date(props.actionTime.getTime()));
     const interval = setInterval(() => {
       if (timeRef.current)
-        timeRef.current.innerHTML = chatInfo && chatInfo.messages && chatInfo.messages.length > 0 ? getTime(chatInfo.messages[0].createAt) : getTime(new Date(props.actionTime.getTime() - 7 * 3600 * 1000));
+        timeRef.current.innerHTML = chatInfo && chatInfo.messages && chatInfo.messages.length > 0 ? getTime(chatInfo.messages[0].createAt) : getTime(new Date(props.actionTime.getTime()));
     }, 1000);
     return () => {
       clearInterval(interval);
