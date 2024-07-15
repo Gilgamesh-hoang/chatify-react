@@ -1,8 +1,15 @@
-import { isFacebookURL, isInstagramURL, isLinkedInURL, isValidURL, isYoutubeURL, } from '~/utils/linkUtil';
+import {
+  isFacebookURL,
+  isInstagramURL,
+  isLinkedInURL,
+  isTwitterURL,
+  isValidURL,
+  isYoutubeURL,
+} from '~/utils/linkUtil';
 
 import { FacebookEmbed, InstagramEmbed, LinkedInEmbed, XEmbed, YouTubeEmbed, } from 'react-social-media-embed';
-import Embed from 'react-embed';
 import React from 'react';
+import ReactPlayer from 'react-player';
 
 const MessageEmbedItem = (
   { url, width, height }: { url:string, width:string|number, height:string|number}) => {
@@ -12,16 +19,15 @@ const MessageEmbedItem = (
   const isFacebook = isFacebookURL(url);
   const isInstagram = isInstagramURL(url);
   const isLinkedIn = isLinkedInURL(url);
-  const isTwitter = false;
-  const isYouTube = false;
+  const isTwitter = isTwitterURL(url);
   return (
     <>
       {isFacebook && <FacebookEmbed url={url} width={width} height={height} /> }
-      {isInstagram && <InstagramEmbed url={url} width={width}  /> }
+      {isInstagram && <InstagramEmbed url={url} width={width} /> }
       {isLinkedIn && <LinkedInEmbed url={url} width={width} height={height} /> }
-      {isTwitter && <XEmbed url={url} width={width} height={height} /> }
-      {isYouTube && <YouTubeEmbed url={url} width={width} height={height} /> }
-      {!isFacebook && !isInstagram && !isLinkedIn && !isTwitter && !isYouTube && <Embed url={url} key={url} /> }
+      {isTwitter && <XEmbed url={url} width={width} /> }
+      {!isFacebook && !isInstagram && !isLinkedIn && !isTwitter && ReactPlayer.canPlay(url) &&
+        <ReactPlayer url={url} width={width} height={height}  /> }
     </>
   );
 };
