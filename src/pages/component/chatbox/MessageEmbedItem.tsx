@@ -13,18 +13,14 @@ const MessageEmbedItem = (
   const isInstagram = isInstagramURL(url);
   const isLinkedIn = isLinkedInURL(url);
   const isTwitter = false;
-  const isYouTube = isYoutubeURL(url);
+  const isYouTube = false;
   return (
     <>
       {isFacebook && <FacebookEmbed url={url} width={width} height={height} /> }
       {isInstagram && <InstagramEmbed url={url} width={width}  /> }
       {isLinkedIn && <LinkedInEmbed url={url} width={width} height={height} /> }
       {isTwitter && <XEmbed url={url} width={width} height={height} /> }
-      {isYouTube && <YouTubeEmbed url={url} width={width} height={height} youTubeProps={
-        {
-          onReady: event => event.target.pauseVideo(),
-          onError: event => console.log(event.data),
-        }} /> }
+      {isYouTube && <YouTubeEmbed url={url} width={width} height={height} /> }
       {!isFacebook && !isInstagram && !isLinkedIn && !isTwitter && !isYouTube && <Embed url={url} key={url} /> }
     </>
   );
