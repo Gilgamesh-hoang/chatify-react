@@ -1,4 +1,4 @@
-import { isFacebookURL, isInstagramURL, isLinkedInURL, isTwitterURL, isValidURL, isYoutubeURL, } from '~/utils/linkUtil';
+import { isFacebookURL, isInstagramURL, isLinkedInURL, isValidURL, isYoutubeURL, } from '~/utils/linkUtil';
 
 import { FacebookEmbed, InstagramEmbed, LinkedInEmbed, XEmbed, YouTubeEmbed, } from 'react-social-media-embed';
 import Embed from 'react-embed';
@@ -20,7 +20,11 @@ const MessageEmbedItem = (
       {isInstagram && <InstagramEmbed url={url} width={width}  /> }
       {isLinkedIn && <LinkedInEmbed url={url} width={width} height={height} /> }
       {isTwitter && <XEmbed url={url} width={width} height={height} /> }
-      {isYouTube && <YouTubeEmbed url={url} width={width} height={height} /> }
+      {isYouTube && <YouTubeEmbed url={url} width={width} height={height} youTubeProps={
+        {
+          onReady: event => event.target.pauseVideo(),
+          onError: event => console.log(event.data),
+        }} /> }
       {!isFacebook && !isInstagram && !isLinkedIn && !isTwitter && !isYouTube && <Embed url={url} key={url} /> }
     </>
   );
