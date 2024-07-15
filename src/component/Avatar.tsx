@@ -1,9 +1,9 @@
-import { PiKeyDuotone, PiKeyFill, PiUserCircle } from 'react-icons/pi';
+import { PiKeyDuotone, PiUserCircle } from 'react-icons/pi';
 import React, {useMemo} from "react";
 import {HiMiniUserGroup} from "react-icons/hi2";
 
 interface AvatarProps {
-    type: number;
+    type: 0 | 1;
     name: string;
     width: number;
     height: number;
@@ -28,7 +28,7 @@ const Avatar: React.FC<AvatarProps> = ({type, name, imageUrl, width, height, own
     // This function is responsible for rendering the avatar based on the provided props.
     const renderAvatar = () => {
         // If the type prop is 'room', render a group icon.
-        if (type == 1) {
+        if (type === 1) {
             return (
                 <div style={{width: width + "px", height: height + "px"}} className="rounded-full flex justify-center items-center border-2 border-gray-700">
                     <HiMiniUserGroup size={width}/>
