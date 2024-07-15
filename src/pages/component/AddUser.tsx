@@ -10,8 +10,6 @@ import { UserSideBar } from './SearchUser';
 import clsx from 'clsx';
 import { useNavigate } from 'react-router';
 import languageUtil from '~/utils/languageUtil';
-import { AppDispatch } from '~/redux/store';
-import { setUpdateNewMessage } from '~/redux/chatDataSlice';
 
 const addUserSchema = yup.object({
   name: yup.string().required('Name is required'),
@@ -22,7 +20,6 @@ const AddUser = ({ username, onClose }: { username?: string, onClose: () => void
   const [name, setName] = useState('');
   const [greeting, setGreeting] = useState('');
   const navigate = useNavigate();
-  const dispatch = useDispatch<AppDispatch>();
   const user = useSelector(userSelector);
   const socket = useSelector(socketSelector);
   const initialValues = {
@@ -76,16 +73,6 @@ const AddUser = ({ username, onClose }: { username?: string, onClose: () => void
         console.log(userList);
         if (userList.length > 0) {
           message.success('Send greeting to ' + userList[0].name + ' sucessfully');
-          dispatch(setUpdateNewMessage({
-            type: 'sent',
-            message: {
-              name: user.username,
-              to: name,
-              type: 0,
-              createAt: new Date(Date.now() - 7 * 3600 * 1000),
-              mes: greeting,
-            },
-          }));
           setTimeout(() => {
             onClose();
             navigate('/0/' + userList[0].name);

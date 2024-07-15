@@ -73,11 +73,11 @@ const ChatInfoPopup: React.FC<InfoProps> = (props) => {
         <div className="w-full h-full overflow-y-auto flex flex-col gap-2">
           {/*Room owner */}
           {
-            props.type === 1 && (<>
+            props.type === 1 && props.room_owner && (<>
               <span>Room owner</span>
-              <ChatUserCard name={props.room_owner!} type={0}
+              <ChatUserCard name={props.room_owner} type={0}
                             hideFunc={props.onClose}
-                            isExist={chatUsernameList.indexOf(props.room_owner!) >= 0}
+                            isExist={chatUsernameList.indexOf(props.room_owner) >= 0}
                             isRoomOwner={true} />
             </>)
           }

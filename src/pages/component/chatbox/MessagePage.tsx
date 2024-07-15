@@ -34,7 +34,7 @@ interface FileUploadProps {
 const MessagePage = () => {
   // try to set current chat
   const { type, name } = useParams();
-  const currentChat = {
+  const currentChat:{type: 0 | 1, name:string} = {
     type: type === undefined ? 1 : type === '0' ? 0 : 1,
     name: name === undefined ? '' : name,
   };
@@ -69,7 +69,6 @@ const MessagePage = () => {
   const [searchCursor, setSearchCursor] = useState(-1);
   const searchInput = useRef('');
   const searchFocus = useRef<HTMLDivElement>(null);
-  const searchResetBtn = useRef<HTMLButtonElement>(null);
   // for show info
   const [openInfo, setOpenInfo] = useState(false);
 
