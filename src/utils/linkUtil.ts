@@ -58,7 +58,7 @@ const isLinkedInURL = (str: string): boolean => {
 };
 
 const isTwitterURL = (str: string): boolean => {
-  return str.match(/^(?:https?:\/\/)?(?:www\\.)?x\\.com\/(\\w+)$/) != null;
+  return str.match(/^(?:https?:\/\/)?(?:www\.)?x\.com\/(\S+)$/) != null || str.match(/^(?:https?:\/\/)?(?:www\.)?twitter\.com\/(\S+)$/) != null;
 };
 
 const isYoutubeURL = (str: string): boolean => {
